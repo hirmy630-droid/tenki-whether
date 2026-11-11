@@ -1,880 +1,981 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>80°エルボ計算</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        :root {
-            --ios-bg: #000000;
-            --ios-card: #1c1c1e;
-            --ios-border: #333333;
-            --ios-orange: #ff9f0a;
-            --accent-80: #af52de;
-            --accent-80leg: #007aff;
-            --accent-dist: #30d158;
-            --ios-silver: #c7c7cc;
-            --ios-silver-dark: #9a9a9e;
-            --label-gray: #b0b0b5;
-            --unfocused-border: #444446;
-        }
-
-        * {
-            box-sizing: border-box;
-            -webkit-text-size-adjust: 100%;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            margin: 0;
-            background: var(--ios-bg);
-            font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        /* ヘッダーエリア */
-        .app-header {
-            width: 100%;
-            max-width: 420px;
-            padding: 16px 12px 6px;
-            display: flex;
-            flex-direction: row;
-            justify-content: space-between;
-            align-items: baseline;
-            background: var(--ios-bg);
-        }
-        .app-header .title {
-            color: #ffffff;
-            font-size: 19px;
-            font-weight: 500;
-            letter-spacing: -0.2px;
-        }
-        .app-header .subtitle {
-            color: var(--label-gray);
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        /* タブ */
-        .tab-wrapper {
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(15px);
-            padding: 4px 0 8px;
-            display: flex;
-            justify-content: center;
-        }
-
-        .tab-container {
-            display: flex;
-            background: #2c2c2e;
-            width: 95%;
-            max-width: 420px;
-            padding: 2px;
-            border-radius: 10px;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
-            border: 1px solid #3a3a3c;
-        }
-
-        .tab-button {
-            flex: 1;
-            padding: 5px 0;
-            border: 1.5px solid transparent;
-            background: transparent;
-            color: var(--ios-silver-dark);
-            font-size: 12px;
-            font-weight: 600; 
-            transition: 0.2s;
-            border-radius: 8px;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .tab-button.active {
-            background: #636366;
-            color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        }
-
-        .mode-80 #nav-80.active { border-color: var(--accent-80); color: #d697ff; }
-        .mode-80leg #nav-80leg.active { border-color: var(--accent-80leg); color: #72b5ff; }
-        .mode-dist #nav-dist.active { border-color: var(--accent-dist); color: #63ff8b; }
-
-        .main-container {
-            width: 100%;
-            max-width: 420px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        /* 結果枠 */
-        .result-box {
-            height: 64px;
-            padding: 0 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 10px 12px;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            transition: background 0.3s, transform 0.1s;
-        }
-        .result-box:active { transform: scale(0.98); }
-
-        .mode-80 .result-box-main { background: var(--accent-80); }
-        .mode-80leg .result-box-main { background: var(--accent-80leg); }
-        .mode-dist .result-box-main { background: var(--accent-dist); }
-
-        /* セル形式グリッド */
-        .cell-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            background: var(--ios-border);
-            gap: 1px;
-            margin: 0 12px 0;
-            border-radius: 16px 16px 0 0;
-            overflow: hidden;
-            border: 1px solid var(--ios-border);
-            border-bottom: none;
-        }
-
-        .calc-cell {
-            background: #121214;
-            height: 54px;
-            padding: 0 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: relative;
-            grid-column: span 3;
-            border: 0.5px solid var(--unfocused-border);
-        }
-        
-        .span-6 { grid-column: span 6 !important; }
-        .span-4 { grid-column: span 4 !important; }
-        .span-2 { grid-column: span 2 !important; }
-
-        .calc-cell.focused {
-            background: #1c1c1e;
-            box-shadow: inset 0 0 0 1.5px var(--ios-orange) !important;
-            border-color: var(--ios-orange);
-            z-index: 10;
-        }
-
-        .input-value {
-            font-size: 26px;
-            font-weight: 700; 
-            color: #ffffff;
-            flex: 1;
-            text-align: right;
-            overflow: hidden;
-        }
-
-        .result-value {
-            font-size: 32px; 
-            font-weight: 700; 
-            color: #ffffff;
-            display: flex;
-            align-items: baseline;
-            gap: 4px;
-        }
-
-        .input-label-left {
-            font-size: 13px;
-            font-weight: 700; 
-            color: var(--label-gray);
-            white-space: nowrap;
-        }
-
-        .result-label-left {
-            font-size: 14px;
-            font-weight: 700; 
-            color: #ffffff;
-        }
-
-        select.input-value {
-            background: transparent;
-            border: none;
-            outline: none;
-            direction: rtl;
-        }
-
-        /* テンキー */
-        .keypad-container {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1px;
-            background: var(--ios-border);
-            margin: 0 12px 12px;
-            border-radius: 0 0 16px 16px;
-            overflow: hidden;
-            border: 1px solid var(--ios-border);
-        }
-
-        .key-btn {
-            background: #1c1c1e;
-            color: white;
-            height: 68px;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.1s;
-        }
-        .key-btn:active { background: #333; }
-        .key-btn.orange { background: var(--ios-orange); font-weight: 700; } 
-        .key-btn.gray { background: #2c2c2e; color: var(--label-gray); font-size: 18px; font-weight: 600; } 
-        
-        #delete-btn-label { font-size: 22px; }
-
-        /* 履歴・図面 */
-        .history-area { background: #000; padding: 12px; width: 100%; max-width: 420px; }
-        .history-header {
-            font-size: 15px; 
-            font-weight: 700; 
-            color: var(--label-gray);
-            margin-bottom: 12px;
-            display: flex;
-            justify-content: space-between;
-        }
-        .history-item {
-            background: #111;
-            border-bottom: 1px solid #222;
-            padding: 10px 14px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        .history-item.is-locked {
-            border: 1px solid var(--ios-orange);
-            border-radius: 8px;
-            margin-bottom: 4px;
-        }
-        .lock-btn {
-            padding: 8px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .lock-btn.active { color: var(--ios-orange); }
-
-        .diagram-container {
-            background: #09090b;
-            padding: 15px;
-            margin: 10px 12px;
-            border: 1px solid var(--ios-border);
-            border-radius: 16px;
-        }
-
-        .app-footer-bar {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 20px 4px 40px;
-            font-size: 12px;
-            color: #444;
-            font-weight: 600;
-        }
-
-        #toast {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(59, 130, 246, 0.95); color: white;
-            padding: 16px 32px; border-radius: 12px; font-weight: bold;
-            opacity: 0; z-index: 1000; transition: 0.3s; pointer-events: none;
-        }
-        #toast.show { opacity: 1; }
-        .hidden { display: none !important; }
-    </style>
-
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#000000">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>明日の服装予報（ウェザーニュース版）</title>
+<meta name="theme-color" content="#f2f2f7">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-180.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="80°エルボ計算">
-<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="服装予報">
 <style>
-#installBtn{
-  position:fixed;
-  right:16px;
-  bottom:calc(16px + env(safe-area-inset-bottom));
-  z-index:9999;
-  border:none;
-  border-radius:14px;
-  background:#2563eb;
-  color:#fff;
-  padding:12px 16px;
-  font-size:14px;
-  font-weight:700;
-  box-shadow:0 10px 24px rgba(0,0,0,.35);
-  display:none;
-}
-#installBtn:active{transform:scale(.98)}
-body{
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Helvetica Neue", Arial, sans-serif;
+    background: #f2f2f7; color: #1c1c1e; font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { max-width: 420px; margin: 0 auto; padding: 10px 14px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; }
+  header { text-align: center; padding-top: 2px; }
+  header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+  header .sub { font-size: 14px; color: #4b5563; margin-top: 4px; font-weight: 500; }
+  .card { background: #fff; border: 1px solid #e5e5ea; border-radius: 16px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .card h2 { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  label.flabel { display: block; font-size: 14px; font-weight: 600; margin: 8px 0 4px; }
+  input[type="text"] {
+    width: 100%; background: #f2f2f7; border: 1px solid #d1d1d6; border-radius: 12px;
+    padding: 9px 12px; font-size: 14px; color: #1c1c1e; outline: none;
+  }
+  input[type="text"]:focus { border-color: #007aff; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > input { flex: 1; }
+  .btn {
+    border: none; cursor: pointer; font-weight: 600; border-radius: 12px;
+    padding: 9px 14px; font-size: 14px; transition: transform .1s, filter .15s;
+    touch-action: manipulation;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn-blue { background: #007aff; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+  .btn-blue:hover { background: #0062cc; }
+  .btn-gray { background: #f2f2f7; color: #007aff; border: 1px solid #d1d1d6; width: 100%; min-height: 44px; font-weight: 700; margin-top: 10px; }
+  .btn-main {
+    width: 100%; height: 46px; font-size: 16px; color: #fff;
+    background: linear-gradient(90deg, #ff9500, #ff6a3a);
+    border-radius: 12px; box-shadow: 0 4px 10px rgba(255,106,58,0.3);
+  }
+  .btn-main:hover { filter: brightness(1.05); }
+  .btn-loc {
+    width: 100%; min-height: 44px; background: #fff; border: 1px solid #d1d1d6; border-radius: 14px;
+    font-size: 15px; font-weight: 700; color: #1c1c1e; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04); touch-action: manipulation;
+  }
+  .btn-loc:active { transform: scale(0.98); }
+  .btn-loc .chev { color: #8e8e93; font-size: 12px; }
+  .loc-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; }
+  .loc-item {
+    display: flex; align-items: center; gap: 8px; background: #f2f2f7;
+    border: 1px solid #e5e5ea; border-radius: 12px; padding: 9px 12px; cursor: pointer;
+  }
+  .loc-item.selected { border-color: #007aff; background: #eaf3ff; }
+  .loc-item .nm { font-weight: 700; font-size: 14px; }
+  .loc-item .ad { font-size: 12px; color: #6b7280; }
+  .loc-item .edit { margin-left: auto; background: none; border: none; color: #007aff; font-size: 14px; cursor: pointer; padding: 4px 6px; }
+  .loc-item .del { background: none; border: none; color: #ff3b30; font-size: 16px; cursor: pointer; padding: 4px 6px; }
+  .status-line { font-size: 12px; color: #6b7280; text-align: center; min-height: 16px; }
+  .status-line.err { color: #ff3b30; }
+  .tabs { display: flex; background: #e9e9ee; border-radius: 12px; padding: 3px; gap: 3px; }
+  .tabs button {
+    flex: 1; border: none; background: transparent; padding: 8px 0; font-size: 15px;
+    font-weight: 600; color: #4b5563; border-radius: 9px; cursor: pointer;
+  }
+  .tabs button.on { background: #fff; color: #1c1c1e; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  .tappable { cursor: pointer; border-radius: 12px; }
+  .tappable:active { background: #f2f2f7; }
+  .tap-hint { font-size: 11px; color: #8e8e93; text-align: right; margin-top: 2px; }
+  .wx-head { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 2px 4px; }
+  .wx-emoji { font-size: 52px; line-height: 1; }
+  .wx-text { font-size: 20px; font-weight: 700; }
+  .wx-date { font-size: 13px; color: #6b7280; margin-top: 2px; }
+  .wx-temps { display: flex; gap: 16px; margin-top: 2px; padding: 0 4px; }
+  .wx-temps .t { font-size: 15px; }
+  .wx-temps .hi { color: #ff3b30; font-weight: 700; }
+  .wx-temps .lo { color: #007aff; font-weight: 700; }
+  .feels-strip {
+    margin-top: 8px; background: #fff7e6; border-radius: 12px; padding: 7px 10px;
+    display: flex; align-items: center; gap: 6px; font-size: 13px;
+  }
+  .feels-strip .fk { font-weight: 700; color: #92400e; flex: 0 0 auto; }
+  .feels-strip .fv { flex: 1; display: flex; justify-content: space-around; font-weight: 700; }
+  .feels-strip .fv span b { color: #ff6a3a; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .cell { background: #f2f2f7; border-radius: 12px; padding: 8px 10px; text-align: center; }
+  .cell .k { font-size: 12px; color: #6b7280; font-weight: 600; }
+  .cell .v { font-size: 17px; font-weight: 700; margin-top: 2px; }
+  .cell.clickable { cursor: pointer; border: 1px solid #dbe7f7; background: #eef5ff; }
+  .cell.clickable:active { transform: scale(0.97); }
+  .cell .hint { font-size: 10px; color: #8e8e93; margin-top: 2px; }
+  .band { border-top: 1px solid #e5e5ea; padding: 8px 2px; display: flex; gap: 10px; }
+  .band:first-of-type { border-top: none; }
+  .band .when { flex: 0 0 64px; text-align: center; }
+  .band .when .w { font-weight: 700; font-size: 15px; }
+  .band .when .tmp { font-size: 13px; color: #ff6a3a; font-weight: 700; margin-top: 2px; }
+  .band .outfit { flex: 1; font-size: 14px; line-height: 1.5; }
+  .band .outfit .o { font-weight: 700; }
+  .feels-row {
+    margin-top: 8px; background: #fff7e6; border-radius: 12px; padding: 8px 10px;
+    display: flex; justify-content: space-around; text-align: center;
+  }
+  .feels-row .fr-k { font-size: 12px; color: #92400e; font-weight: 700; }
+  .feels-row .fr-v { font-size: 17px; font-weight: 700; color: #ff6a3a; margin-top: 2px; }
+  .om-row { display: flex; gap: 10px; padding: 8px 2px; border-bottom: 1px solid #eeeef2; align-items: baseline; }
+  .om-row:last-child { border-bottom: none; }
+  .om-k { flex: 0 0 64px; font-weight: 700; font-size: 14px; color: #374151; }
+  .om-v { flex: 1; font-size: 14px; line-height: 1.5; font-weight: 600; }
+  .advice { border-radius: 12px; padding: 9px 12px; font-size: 14px; line-height: 1.5; margin-top: 8px; }
+  .advice.rain { background: #eaf3ff; }
+  .advice.ok { background: #eefbf0; }
+  .advice.warn { background: #fff7e6; }
+  .nextrain { font-size: 15px; line-height: 1.55; }
+  .nextrain .big { font-size: 16px; font-weight: 700; }
+  table.mini { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.mini th, table.mini td { padding: 4px; text-align: center; border-bottom: 1px solid #eeeef2; }
+  table.mini tr.rainy td { background: #eef5ff; font-weight: 700; }
+  table.mini th { color: #6b7280; font-weight: 600; }
+  .week-row { display: flex; align-items: center; gap: 8px; padding: 6px 2px; border-bottom: 1px solid #eeeef2; font-size: 14px; }
+  .week-row:last-child { border-bottom: none; }
+  .week-row .d { flex: 0 0 74px; font-weight: 600; }
+  .week-row .e { font-size: 20px; flex: 0 0 30px; text-align: center; }
+  .week-row .hi { color: #ff3b30; font-weight: 700; }
+  .week-row .lo { color: #007aff; font-weight: 700; }
+  .week-row .pop { margin-left: auto; color: #0a64c8; font-weight: 600; }
+  .note { font-size: 12px; color: #8e8e93; line-height: 1.55; }
+  .hidden { display: none !important; }
+  /* ポップアップ（モーダル） */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 50;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .sheet {
+    background: #fff; width: 100%; max-width: 420px; max-height: 88vh; max-height: 88dvh; overflow-y: auto;
+    border-radius: 20px 20px 0 0; padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+    animation: slideUp .22s ease-out;
+  }
+  @keyframes slideUp { from { transform: translateY(30px); opacity: 0.4; } to { transform: translateY(0); opacity: 1; } }
+  .sheet-head { display: flex; align-items: center; margin-bottom: 10px; }
+  .sheet-head h3 { font-size: 16px; font-weight: 700; flex: 1; }
+  .sheet-close {
+    background: #f2f2f7; border: none; width: 32px; height: 32px; border-radius: 50%;
+    font-size: 15px; cursor: pointer; color: #4b5563;
+  }
 </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>明日の服装予報</h1>
+    <p class="sub">KYOWA ROOF</p>
+  </header>
+
+  <!-- 登録場所ボタン（タブの上） -->
+  <button type="button" class="btn-loc" id="locOpenBtn">📍 <span id="locBtnLabel">場所を選択</span> <span class="chev">▼ 管理</span></button>
+
+  <!-- 予報 -->
+  <section class="card">
+    <div class="tabs">
+      <button type="button" id="tabToday">今日</button>
+      <button type="button" id="tabTomorrow" class="on">明日</button>
+    </div>
+    <div class="tappable" id="wxMain" title="週間・2週間予報を開く">
+      <div class="wx-head">
+        <div class="wx-emoji" id="wxEmoji">🌤️</div>
+        <div>
+          <div class="wx-text" id="wxText">読み込み中…</div>
+          <div class="wx-date" id="wxDate"></div>
+        </div>
+      </div>
+      <div class="wx-temps">
+        <span class="t">最高 <span class="hi" id="wxHigh">--℃</span></span>
+        <span class="t">最低 <span class="lo" id="wxLow">--℃</span></span>
+      </div>
+      <p class="tap-hint">タップで週間・2週間予報を表示</p>
+    </div>
+    <div class="feels-strip">
+      <span class="fk">🌡️ 体感温度（日中平均）</span>
+      <span class="fv"><span><b id="feelAvg" style="font-size:17px;">--℃</b></span></span>
+    </div>
+    <div class="grid2">
+      <div class="cell"><div class="k">降水確率（午前）</div><div class="v" id="wxPopAm">--%</div></div>
+      <div class="cell"><div class="k">降水確率（午後）</div><div class="v" id="wxPopPm">--%</div></div>
+      <div class="cell clickable" id="precCell"><div class="k">降水量</div><div class="v" id="wxPrec">--ミリ</div></div>
+      <div class="cell clickable" id="windCell"><div class="k">風速（1日の最大）</div><div class="v" id="wxWind">-- m/s</div></div>
+    </div>
+    <div style="margin-top:12px;">
+      <button type="button" class="btn btn-main" id="refreshBtn">🔄 最新の予報に更新</button>
+    </div>
+    <p class="status-line" id="fetchStatus" style="margin-top:8px;"></p>
+  </section>
+
+  <!-- 明日の服装 -->
+  <section class="card">
+    <h2>👕 明日の服装</h2>
+    <div id="clothesBands"></div>
+    <div class="feels-row" id="tmrFeelsRow">
+      <div><div class="fr-k">8時の体感温度</div><div class="fr-v" id="feel8">--℃</div></div>
+      <div><div class="fr-k">14時の体感温度</div><div class="fr-v" id="feel14">--℃</div></div>
+      <div><div class="fr-k">20時の体感温度</div><div class="fr-v" id="feel20">--℃</div></div>
+    </div>
+    <div class="advice ok" id="umbrellaAdvice">傘の目安を計算中…</div>
+  </section>
+
+  <!-- つぎの雨予報 -->
+  <section class="card">
+    <h2>🌧️ つぎの雨予報</h2>
+    <div class="nextrain" id="nextRain"><p class="note">予報を取得すると表示します。</p></div>
+  </section>
+</div>
+
+<!-- ポップアップ：登録場所の選択・管理 -->
+<div class="overlay hidden" id="locModal">
+  <div class="sheet">
+    <div class="sheet-head"><h3>📍 登録場所の選択・管理</h3><button type="button" class="sheet-close" data-close="locModal">✕</button></div>
+    <label class="flabel" for="locName">名前（任意）</label>
+    <input type="text" id="locName" placeholder="例：自宅・会社・現場A">
+    <label class="flabel" for="locAddr">住所（天気の取得に使用）</label>
+    <div class="row">
+      <input type="text" id="locAddr" placeholder="市区町村・都道府県（例: 東京都中央区）">
+      <button type="button" class="btn btn-blue" id="addLocBtn">保存</button>
+    </div>
+    <button type="button" class="btn btn-gray" id="geoBtn">📍 現在地を取得・再取得</button>
+    <div class="loc-list" id="locList"></div>
+    <p class="status-line" id="locStatus" style="margin-top:8px;"></p>
+  </div>
+</div>
+
+<!-- ポップアップ：1時間毎の予報／雨予報 -->
+<div class="overlay hidden" id="hourlyModal">
+  <div class="sheet">
+    <div class="sheet-head"><h3 id="hourlyTitle">🕐 1時間毎の予報</h3><button type="button" class="sheet-close" data-close="hourlyModal">✕</button></div>
+    <div id="hourlyBody"><p class="note">読み込み中…</p></div>
+  </div>
+</div>
+
+<!-- ポップアップ：週間・2週間予報 -->
+<div class="overlay hidden" id="weekModal">
+  <div class="sheet">
+    <div class="sheet-head"><h3>📅 週間・2週間予報</h3><button type="button" class="sheet-close" data-close="weekModal">✕</button></div>
+    <div id="weekList"><p class="note">読み込み中…</p></div>
+  </div>
+</div>
+
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+'use strict';
+/* =========================================================
+   明日の服装予報（ウェザーニュース版）
+   データ取得：ウェザーニュースの無料公開データ
+   - 日別予報JSON: https://site.weathernews.jp/lba/wxdata/api_data_ss1/mrf?lat=&lon=
+   - 地点ページHTML: https://weathernews.jp/onebox/{lat}/{lon}/temp=c&lang=ja
+     （今日/明日の天気・午前午後降水確率、1時間予報、週間予報、実況を解析）
+   地点の緯度経度変換：国土地理院 住所検索API（無料）
+   体感温度：1時間予報の気温と風速から計算した目安
+   ========================================================= */
+
+const WN_MRF_URL = (lat, lon) => `https://site.weathernews.jp/lba/wxdata/api_data_ss1/mrf?lat=${lat}&lon=${lon}`;
+const WN_PAGE_URL = (lat, lon) => `https://weathernews.jp/onebox/${lat}/${lon}/temp=c&lang=ja`;
+const GSI_SEARCH_URL = (q) => `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(q)}`;
+
+/* ---------- 天気コード → テキスト・絵文字 ---------- */
+const WX_TEXT = {
+  100:'晴れ',101:'晴れ時々くもり',102:'晴れ一時雨',103:'晴れ時々雨',104:'晴れ時々雪',105:'晴れ一時雪',
+  106:'晴れ時々雨か雪',107:'晴れ一時雨か雪',108:'晴れ時々雨か雷雨',110:'晴れのち時々くもり',111:'晴れのちくもり',
+  112:'晴れのち一時雨',113:'晴れのち時々雨',114:'晴れのち雨',115:'晴れのち雨か雪',116:'晴れのち雪',117:'晴れのち雨か雷雨',
+  200:'くもり',201:'くもり時々晴れ',202:'くもり一時雨',203:'くもり時々雨',204:'くもり時々雪',205:'くもり一時雪',
+  206:'くもり時々雨か雪',207:'くもり一時雨か雪',208:'くもり時々雨か雷雨',209:'くもり一時雨か雪',210:'くもりのち晴れ',
+  211:'くもりのち時々晴れ',212:'くもりのち一時雨',213:'くもりのち時々雨',214:'くもりのち雨',215:'くもりのち雨か雪',
+  216:'くもりのち雪',217:'くもりのち雨か雷雨',218:'くもりのち雨か雪',
+  300:'雨',301:'雨時々晴れ',302:'雨時々止む',303:'雨時々雪',304:'雨か雪',305:'雨時々降雪',306:'大雨',307:'雨で暴風を伴う',
+  308:'雨時々暴風雨',309:'雨一時雪',310:'雨のちくもり',311:'雨のち晴れ',312:'雨のち時々晴れ',313:'雨のちくもり（時々晴れ）',
+  314:'雨のち雪',315:'雨のち晴れ（時々くもり）',316:'雨のち晴れ',
+  400:'雪',401:'雪時々晴れ',402:'雪時々止む',403:'雪時々雨',404:'雪か雨',405:'雪時々雨',406:'雪で暴風を伴う',407:'暴風雪',
+  408:'雪時々暴風雪',409:'雪一時雨',410:'雪のちくもり',411:'雪のち晴れ',412:'雪のち時々晴れ',413:'雪のちくもり',414:'雪のち雨',
+  500:'雨か雪',550:'雨か雷雨',600:'晴れ',650:'くもり'
+};
+function wxText(code) {
+  if (WX_TEXT[code]) return WX_TEXT[code];
+  const h = Math.floor(Number(code) / 100);
+  return h === 1 ? '晴れ' : h === 2 ? 'くもり' : h === 3 ? '雨' : h === 4 ? '雪' : '―';
+}
+function wxEmoji(code) {
+  const c = Number(code);
+  if (WX_TEXT[c] && /雷/.test(WX_TEXT[c])) return '⛈️';
+  const h = Math.floor(c / 100);
+  if (h === 1) return (c === 100) ? '☀️' : '🌤️';
+  if (h === 2) return '☁️';
+  if (h === 3) return '🌧️';
+  if (h === 4) return '🌨️';
+  return '🌤️';
+}
+
+/* ---------- 体感温度（気温と風速から計算する目安） ---------- */
+function feelsLike(temp, windSpd) {
+  if (!Number.isFinite(temp)) return null;
+  const v = Number.isFinite(windSpd) ? windSpd : 0;
+  if (temp <= 10) {
+    if (v < 1.3) return Math.round(temp);
+    const kmh = v * 3.6;
+    const p = Math.pow(kmh, 0.16);
+    // 風冷指数（ウィンドチル）
+    return Math.round(13.12 + 0.6215 * temp - 11.37 * p + 0.3965 * temp * p);
+  }
+  // 暖かい時期は風による体感低下を控えめに見積もる
+  return Math.round(temp - Math.min(2.5, 0.5 * v));
+}
+
+/* ---------- 服装判定 ---------- */
+function workOutfitFor(temp) {
+  if (!Number.isFinite(temp)) return { tops: 'データなし', bottoms: '取得後に判定します' };
+  if (temp >= 31) return { tops: '空調服', bottoms: '夏ズボン' };
+  if (temp >= 25) return { tops: '半袖シャツ', bottoms: '夏ズボン' };
+  if (temp >= 21) return { tops: '長袖', bottoms: 'ズボン' };
+  if (temp >= 18) return { tops: '長袖＋ジャケット', bottoms: '冬ズボン' };
+  if (temp >= 15) return { tops: 'インナー＋長袖＋ジャケット', bottoms: 'インナー＋冬ズボン' };
+  if (temp >= 11) return { tops: '防寒インナー＋長袖＋軽防寒服', bottoms: 'インナー＋軽防寒ズボン' };
+  if (temp >= 6)  return { tops: '防寒インナー＋長袖シャツ＋ジャケット＋軽防寒服', bottoms: '防寒インナー＋軽防寒ズボン' };
+  return { tops: '防寒インナー＋長袖シャツ＋重防寒服', bottoms: '防寒インナー＋防寒ズボン' };
+}
+// 判定温度の風速補正：風速5m/s以上は-1℃、0.5m/s以下は+1℃
+function judgeTemp(feelsAvg, windAvg) {
+  if (!Number.isFinite(feelsAvg)) return null;
+  let t = feelsAvg;
+  if (Number.isFinite(windAvg)) {
+    if (windAvg >= 5) t -= 1;
+    else if (windAvg <= 0.5) t += 1;
+  }
+  return t;
+}
+function umbrellaAdvice(popAm, popPm) {
+  const pops = [popAm, popPm].filter(v => Number.isFinite(v));
+  if (!pops.length) return { cls: 'warn', text: '降水確率を取得できないため、傘の判断ができません。' };
+  const max = Math.max(...pops);
+  if (max >= 50) return { cls: 'rain', text: `☔ 雨の可能性が高いです（最大 ${max}%）。傘を必ずお持ちください。` };
+  if (max >= 30) return { cls: 'warn', text: `🌂 降水確率が最大 ${max}% です。折りたたみ傘があると安心です。` };
+  return { cls: 'ok', text: `☀️ 降水確率は最大でも ${max}% です。傘は不要でしょう。` };
+}
+
+/* ---------- ウェザーニュース解析（正規表現ベース） ---------- */
+function numOrNull(s) { const n = parseFloat(s); return Number.isFinite(n) ? n : null; }
+
+// 今日/明日カード: h3見出し単位で切り出して解析
+function parseDayCards(html) {
+  const result = {};
+  const heads = [];
+  const hre = /<h3 class="">(今日の天気|明日の天気)\s*<span>([^<]+)<\/span>\s*<\/h3>/g;
+  let hm;
+  while ((hm = hre.exec(html)) !== null) heads.push({ key: hm[1], label: hm[2], start: hm.index, bodyStart: hre.lastIndex });
+  heads.push({ key: null, label: null, start: html.length, bodyStart: html.length });
+  for (let hi = 0; hi < heads.length - 1; hi++) {
+    const h = heads[hi];
+    const seg = html.slice(h.bodyStart, Math.min(heads[hi + 1].start, h.bodyStart + 8000));
+    const key = h.key === '今日の天気' ? 'today' : 'tomorrow';
+    const textM = seg.match(/<figcaption class="status sp">([^<]+)<\/figcaption>/) || seg.match(/<p class="status pc">([^<]+)<\/p>/);
+    const iconM = seg.match(/wxicon\/(\d+)\.png/);
+    const highM = seg.match(/<div class="high">\s*<dt>最高<\/dt>\s*<dd>(-?\d+)℃/);
+    const lowM = seg.match(/<div class="low">\s*<dt>最低<\/dt>\s*<dd>(-?\d+)℃/);
+    const pops = [...seg.matchAll(/<td><span>(-|\d+)<span class="unit">%<\/span><\/span><\/td>/g)].map(x => x[1] === '-' ? null : Number(x[1]));
+    result[key] = {
+      dateLabel: h.label,
+      text: textM ? textM[1] : null,
+      wx: iconM ? Number(iconM[1]) : null,
+      high: highM ? Number(highM[1]) : null,
+      low: lowM ? Number(lowM[1]) : null,
+      popAm: pops.length > 0 ? pops[0] : null,
+      popPm: pops.length > 1 ? pops[1] : null
+    };
+  }
+  return result;
+}
+
+// 1時間予報: wx__table（data-num="2")内の日別グループを解析
+// 戻り値: [{ date: Date(ローカル0時), day, dow, time, wx, rainMm, temp, windSpd, past }]
+function parseHourly(html, nowDate) {
+  const i2 = html.indexOf('data-num="2"');
+  if (i2 < 0) return [];
+  const i3 = html.indexOf('data-num="3"', i2);
+  const seg = html.slice(i2, i3 > i2 ? i3 : i2 + 260000);
+  const groups = [];
+  const parts = seg.split('<div class="group">');
+  for (let k = 1; k < parts.length; k++) {
+    const p = parts[k];
+    const dl = p.match(/<div class="date">\s*<p>(\d+)日\((.)\)<\/p>/);
+    if (!dl) continue;
+    const rows = [];
+    const ulRe = /<ul[^>]*class="list( past)?"[^>]*>([\s\S]*?)<\/ul>/g;
+    let um;
+    while ((um = ulRe.exec(p)) !== null) {
+      const u = um[2];
+      const time = u.match(/<li class="time">\s*<p>(\d+)<\/p>/);
+      if (!time) continue;
+      const wx = u.match(/wxicon\/(\d+)\.png/);
+      const rain = u.match(/<li class="rain">\s*<p>([\d.]+|-)<span>ミリ<\/span><\/p>/);
+      const temp = u.match(/<li class="temp">\s*<p>(-?[\d.]+)<span>℃<\/span><\/p>/);
+      const wind = u.match(/wind_\d+_\d+\.png[\s\S]*?<p>(\d+)<span>m\/s<\/span><\/p>/);
+      rows.push({
+        time: Number(time[1]),
+        wx: wx ? Number(wx[1]) : null,
+        rainMm: rain ? numOrNull(rain[1]) : null,
+        temp: temp ? numOrNull(temp[1]) : null,
+        windSpd: wind ? Number(wind[1]) : null,
+        past: !!um[1]
+      });
+    }
+    if (rows.length) groups.push({ day: Number(dl[1]), dow: dl[2], rows });
+  }
+  // 日付の確定：今日の日番号を含むグループを「今日」とし、前後を連続日として割り当てる
+  const base = nowDate || new Date();
+  let anchor = groups.findIndex(g => g.day === base.getDate());
+  if (anchor < 0) anchor = Math.min(2, Math.max(0, groups.length - 1));
+  const out = [];
+  groups.forEach((g, gi) => {
+    const d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + (gi - anchor));
+    g.rows.forEach(r => out.push({ ...r, date: d, dow: g.dow }));
+  });
+  return out;
+}
+
+// 週間・2週間: ul.wxweek_content（.past は過去実績なので除外）
+function parseWeek(html) {
+  const out = [];
+  const re = /<ul[^>]*class="wxweek_content[^"]*"[^>]*>([\s\S]*?)<\/ul>/g;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const tag = m[0].slice(0, m[0].indexOf('>'));
+    if (/past/.test(tag)) continue;
+    const seg = m[1];
+    const day = seg.match(/<p class="day">(\d+)<\/p>/);
+    const dow = seg.match(/<p class="dow">\((.)\)<\/p>/);
+    const icon = seg.match(/wxicon\/(\d+)\.png/);
+    const high = seg.match(/<li class="high">\s*<p>(-?\d+)/);
+    const low = seg.match(/<li class="low">\s*<p>(-?\d+)/);
+    const rain = seg.match(/<li class="rain">\s*<p>(\d+)<span>(%|ミリ)<\/span>/);
+    if (!day) continue;
+    out.push({
+      day: Number(day[1]), dow: dow ? dow[1] : '',
+      wx: icon ? Number(icon[1]) : null,
+      high: high ? Number(high[1]) : null,
+      low: low ? Number(low[1]) : null,
+      rainVal: rain ? Number(rain[1]) : null,
+      rainUnit: rain ? rain[2] : null
+    });
+  }
+  return out;
+}
+
+// ページタイトルから地点名（例: 東京都中央区の天気予報(...) → 東京都中央区）
+function parsePlaceName(html) {
+  const m = html.match(/<title>([^<]+)の天気予報/);
+  return m ? m[1] : null;
+}
+
+/* ---------- 日付ユーティリティ ---------- */
+function jstNow() { return new Date(Date.now() + 9 * 60 * 60 * 1000); } // UTCフィールドをJSTとして読む簡易方式
+function dateFromMrfTm(tm) {
+  const d = new Date(tm * 1000 + 9 * 60 * 60 * 1000);
+  return { y: d.getUTCFullYear(), mo: d.getUTCMonth() + 1, d: d.getUTCDate(), dow: '日月火水木金土'[d.getUTCDay()] };
+}
+function sameDay(a, b) {
+  return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function dayLabel(date, now) {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = Math.round((target - today) / 86400000);
+  if (diff === 0) return '今日';
+  if (diff === 1) return '明日';
+  return `${date.getMonth() + 1}月${date.getDate()}日（${'日月火水木金土'[date.getDay()]}）`;
+}
+
+// つぎの雨：1時間予報から「次に雨が降り出す時刻と続く時間帯」を探す
+function findNextRain(hourly, week, now) {
+  const isRain = (r) => (r.rainMm != null && r.rainMm >= 0.5) || (r.wx != null && r.wx >= 300 && r.wx < 400);
+  if (hourly && hourly.length) {
+    let startIdx = -1;
+    for (let i = 0; i < hourly.length; i++) {
+      const r = hourly[i];
+      const dt = new Date(r.date.getFullYear(), r.date.getMonth(), r.date.getDate(), r.time);
+      if (dt > now && isRain(r)) { startIdx = i; break; }
+    }
+    if (startIdx >= 0) {
+      let end = null, maxMm = 0, lastRainDt = null;
+      for (let i = startIdx; i < hourly.length; i++) {
+        const r = hourly[i];
+        const dt = new Date(r.date.getFullYear(), r.date.getMonth(), r.date.getDate(), r.time);
+        if (isRain(r)) {
+          lastRainDt = dt;
+          if (r.rainMm != null) maxMm = Math.max(maxMm, r.rainMm);
+        } else if (lastRainDt && dt - lastRainDt > 2 * 3600000) {
+          break;
+        }
+        end = lastRainDt;
+      }
+      const s = hourly[startIdx];
+      const startDt = new Date(s.date.getFullYear(), s.date.getMonth(), s.date.getDate(), s.time);
+      return { type: 'hourly', startDt, endDt: end, maxMm };
+    }
+  }
+  // 1時間予報の範囲に無ければ週間予報から最初の雨の日を探す
+  if (week && week.length) {
+    for (let i = 0; i < week.length; i++) {
+      const w = week[i];
+      const rainyDay = (w.wx != null && w.wx >= 300 && w.wx < 400) || (w.rainUnit === '%' && w.rainVal != null && w.rainVal >= 50);
+      if (rainyDay) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+        return { type: 'week', date: d, pop: w.rainUnit === '%' ? w.rainVal : null };
+      }
+    }
+  }
+  return { type: 'none' };
+}
+
+// 9時〜16時の体感温度の平均（1時間予報から）。取れない場合は昼（14時）→最高気温の順で代替
+function daytimeFeelsAvg(hourly, dateObj, fallbackTemp) {
+  if (hourly && hourly.length) {
+    const rows = hourly.filter(r => sameDay(r.date, dateObj) && r.time >= 9 && r.time <= 16 && r.temp != null);
+    const vals = rows.map(r => feelsLike(r.temp, r.windSpd)).filter(v => v != null);
+    if (vals.length) return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+    const r14 = hourly.find(r => sameDay(r.date, dateObj) && r.time === 14);
+    if (r14 && r14.temp != null) return feelsLike(r14.temp, r14.windSpd);
+  }
+  if (Number.isFinite(fallbackTemp)) return feelsLike(fallbackTemp, 0);
+  return null;
+}
+
+// その日の風速の最大値（m/s）
+function dayWindMax(hourly, dateObj) {
+  if (!hourly || !hourly.length) return null;
+  const vals = hourly.filter(r => sameDay(r.date, dateObj) && r.windSpd != null).map(r => r.windSpd);
+  if (!vals.length) return null;
+  return Math.max(...vals);
+}
+
+// 9時〜16時の風速の平均（m/s、服装判定の補正用）。取れない場合はその日の全時間で代替
+function daytimeWindAvg(hourly, dateObj) {
+  if (!hourly || !hourly.length) return null;
+  let rows = hourly.filter(r => sameDay(r.date, dateObj) && r.time >= 9 && r.time <= 16 && r.windSpd != null);
+  if (!rows.length) rows = hourly.filter(r => sameDay(r.date, dateObj) && r.windSpd != null);
+  if (!rows.length) return null;
+  return Math.round((rows.reduce((a, b) => a + b.windSpd, 0) / rows.length) * 10) / 10;
+}
+
+/* =========================================================
+   ここからブラウザ実行時の処理
+   ========================================================= */
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  const LS_LOC = 'wn_clothes_locations_v1';
+  const LS_CACHE = 'wn_clothes_cache_v2';
+  let locations = [];
+  let selectedId = null;
+  let currentDay = 'tomorrow'; // 'today' | 'tomorrow'
+  let lastData = null; // { mrf, cards, hourly, week, placeName, fetchedAt }
+
+  const $ = (id) => document.getElementById(id);
+
+  function loadLocations() {
+    try { locations = JSON.parse(localStorage.getItem(LS_LOC) || '[]'); } catch (e) { locations = []; }
+    if (!locations.length) {
+      locations = [{ id: 'default-chuo', name: '東京都中央区（サンプル）', addr: '東京都中央区', lat: 35.6706, lon: 139.7720 }];
+      saveLocations();
+    }
+    if (!selectedId || !locations.some(l => l.id === selectedId)) selectedId = locations[0].id;
+  }
+  function saveLocations() { try { localStorage.setItem(LS_LOC, JSON.stringify(locations)); } catch (e) {} }
+  function selectedLoc() { return locations.find(l => l.id === selectedId) || locations[0]; }
+
+  function renderLocations() {
+    const el = $('locList');
+    el.innerHTML = '';
+    locations.forEach(loc => {
+      const div = document.createElement('div');
+      div.className = 'loc-item' + (loc.id === selectedId ? ' selected' : '');
+      div.innerHTML = `<div><div class="nm"></div><div class="ad"></div></div>`;
+      div.querySelector('.nm').textContent = loc.name || loc.addr;
+      div.querySelector('.ad').textContent = loc.addr;
+      const edit = document.createElement('button');
+      edit.type = 'button'; edit.className = 'edit'; edit.textContent = '✎';
+      edit.title = '名前を編集';
+      edit.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const newName = window.prompt('登録名を編集してください', loc.name || '');
+        if (newName === null) return;
+        loc.name = newName.trim();
+        saveLocations(); renderLocations(); renderLocBtn();
+      });
+      div.appendChild(edit);
+      const del = document.createElement('button');
+      del.type = 'button'; del.className = 'del'; del.textContent = '✕';
+      del.title = '削除';
+      del.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        locations = locations.filter(l => l.id !== loc.id);
+        if (selectedId === loc.id) selectedId = locations.length ? locations[0].id : null;
+        saveLocations(); renderLocations(); renderLocBtn();
+        if (selectedId) refresh(false);
+      });
+      div.appendChild(del);
+      div.addEventListener('click', () => {
+        selectedId = loc.id; renderLocations(); renderLocBtn();
+        closeModal('locModal');
+        refresh(false);
+      });
+      el.appendChild(div);
+    });
+  }
+  function renderLocBtn() {
+    const loc = selectedLoc();
+    $('locBtnLabel').textContent = loc ? (lastData && lastData.placeName ? lastData.placeName : (loc.name || loc.addr)) : '場所を登録してください';
+  }
+
+  async function geocode(addr) {
+    const res = await fetch(GSI_SEARCH_URL(addr));
+    if (!res.ok) throw new Error('住所検索に失敗しました');
+    const json = await res.json();
+    if (!json.features || !json.features.length) throw new Error('住所が見つかりませんでした');
+    const f = json.features[0];
+    return { lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], title: f.properties.title || addr };
+  }
+
+  // 緯度経度→住所（OpenStreetMapの逆ジオコーディング、無料）
+  async function reverseGeocode(lat, lon) {
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=jsonv2&accept-language=ja&zoom=18`);
+      if (!res.ok) return null;
+      const j = await res.json();
+      const a = (j && j.address) || {};
+      const parts = [a.state, a.city || a.town || a.village || a.county, a.quarter || a.suburb, a.neighbourhood]
+        .filter((v, i, arr) => v && arr.indexOf(v) === i);
+      if (parts.length) return parts.join(' ');
+      if (j && j.display_name) return j.display_name.replace(/, /g, ' ');
+      return null;
+    } catch (e) { return null; }
+  }
+
+  async function addLocation() {
+    const addr = $('locAddr').value.trim();
+    const name = $('locName').value.trim();
+    if (!addr) { setLocStatus('住所を入力してください', true); return; }
+    setLocStatus('住所を検索中…');
+    try {
+      const g = await geocode(addr);
+      const loc = { id: 'loc' + Date.now(), name, addr, lat: Math.round(g.lat * 10000) / 10000, lon: Math.round(g.lon * 10000) / 10000 };
+      locations.unshift(loc);
+      selectedId = loc.id;
+      saveLocations(); renderLocations(); renderLocBtn();
+      $('locAddr').value = ''; $('locName').value = '';
+      setLocStatus('追加しました');
+      closeModal('locModal');
+      refresh(false);
+    } catch (e) { setLocStatus(e.message || '追加に失敗しました', true); }
+  }
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) { setLocStatus('現在地取得に対応していません', true); return; }
+    setLocStatus('現在地を取得中…');
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const lat = Math.round(pos.coords.latitude * 10000) / 10000;
+      const lon = Math.round(pos.coords.longitude * 10000) / 10000;
+      setLocStatus('住所に変換中…');
+      const addr = await reverseGeocode(lat, lon);
+      const loc = { id: 'loc' + Date.now(), name: '現在地', addr: addr || `緯度${lat} 経度${lon}`, lat, lon };
+      locations.unshift(loc);
+      selectedId = loc.id;
+      saveLocations(); renderLocations(); renderLocBtn();
+      setLocStatus('現在地を追加しました');
+      closeModal('locModal');
+      refresh(false);
+    }, () => setLocStatus('現在地を取得できませんでした', true), { timeout: 15000 });
+  }
+
+  function setStatus(msg, isErr) {
+    const el = $('fetchStatus');
+    el.textContent = msg || '';
+    el.className = 'status-line' + (isErr ? ' err' : '');
+  }
+  function setLocStatus(msg, isErr) {
+    const el = $('locStatus');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.className = 'status-line' + (isErr ? ' err' : '');
+  }
+
+  function openModal(id) { $(id).classList.remove('hidden'); }
+  function closeModal(id) { $(id).classList.add('hidden'); }
+
+  function cacheKey(loc) { return `${loc.lat},${loc.lon}`; }
+  function saveCache(loc, data) {
+    try {
+      const all = JSON.parse(localStorage.getItem(LS_CACHE) || '{}');
+      all[cacheKey(loc)] = data;
+      localStorage.setItem(LS_CACHE, JSON.stringify(all));
+    } catch (e) {}
+  }
+  function loadCache(loc) {
+    try {
+      const all = JSON.parse(localStorage.getItem(LS_CACHE) || '{}');
+      const c = all[cacheKey(loc)] || null;
+      if (c && c.hourly) {
+        // JSON化で文字列になった日付をDateへ戻す
+        c.hourly = c.hourly.map(r => ({ ...r, date: new Date(r.date) }));
+      }
+      return c;
+    } catch (e) { return null; }
+  }
+
+  async function refresh(useCacheFirst) {
+    const loc = selectedLoc();
+    if (!loc) { setStatus('地点が登録されていません', true); return; }
+    const cached = loadCache(loc);
+    if (useCacheFirst && cached) { lastData = cached; render(); }
+    setStatus('予報を取得中…');
+    try {
+      const [mrfRes, pageRes] = await Promise.all([
+        fetch(WN_MRF_URL(loc.lat, loc.lon)).then(r => { if (!r.ok) throw new Error('mrf'); return r.json(); }),
+        fetch(WN_PAGE_URL(loc.lat, loc.lon)).then(r => { if (!r.ok) throw new Error('page'); return r.text(); })
+      ]);
+      const data = {
+        mrf: mrfRes.mrf || [],
+        cards: parseDayCards(pageRes),
+        hourly: parseHourly(pageRes, new Date()),
+        week: parseWeek(pageRes),
+        placeName: parsePlaceName(pageRes),
+        fetchedAt: Date.now()
+      };
+      lastData = data;
+      saveCache(loc, data);
+      render();
+      const t = new Date(data.fetchedAt);
+      setStatus(`最終取得：${t.getHours()}時${String(t.getMinutes()).padStart(2, '0')}分`);
+    } catch (e) {
+      if (cached) {
+        lastData = cached; render();
+        setStatus('取得に失敗したため、前回取得したデータを表示しています', true);
+      } else {
+        setStatus('取得に失敗しました。通信環境を確認して「最新の予報に更新」を押してください', true);
+      }
+    }
+  }
+
+  function dayEntry(offset) { // offset: 0=today, 1=tomorrow (MRF配列の並び）
+    if (!lastData || !lastData.mrf || !lastData.mrf.length) return null;
+    const idx = Math.min(offset, lastData.mrf.length - 1);
+    const m = lastData.mrf[idx];
+    const card = lastData.cards ? lastData.cards[offset === 0 ? 'today' : 'tomorrow'] : null;
+    return { mrf: m, card };
+  }
+
+  // 指定日の指定時刻の1時間予報行を返す
+  function hourlyRow(dateObj, hour) {
+    if (!lastData || !lastData.hourly) return null;
+    return lastData.hourly.find(r => sameDay(r.date, dateObj) && r.time === hour) || null;
+  }
+  function feelsAt(dateObj, hour, fallbackTemp) {
+    const r = hourlyRow(dateObj, hour);
+    if (r && r.temp != null) return feelsLike(r.temp, r.windSpd);
+    if (Number.isFinite(fallbackTemp)) return feelsLike(fallbackTemp, 0);
+    return null;
+  }
+  function dateOfEntry(e) {
+    const d = dateFromMrfTm(e.mrf.tm);
+    return new Date(d.y, d.mo - 1, d.d);
+  }
+
+  function render() {
+    if (!lastData) return;
+    const offset = currentDay === 'today' ? 0 : 1;
+    const e = dayEntry(offset);
+    if (!e) return;
+    const m = e.mrf, card = e.card;
+    const d = dateFromMrfTm(m.tm);
+    const dayDate = dateOfEntry(e);
+    const code = card && card.wx ? card.wx : m.WX;
+    $('wxEmoji').textContent = wxEmoji(code);
+    $('wxText').textContent = (card && card.text) ? card.text : wxText(code);
+    $('wxDate').textContent = `${lastData.placeName || ''} ${d.mo}月${d.d}日（${d.dow}）${currentDay === 'today' ? '・今日' : '・明日'}`;
+    $('wxHigh').textContent = `${m.MAXT}℃`;
+    $('wxLow').textContent = `${m.MINT}℃`;
+
+    // 体感温度（9時〜16時の平均）
+    const fAvg = daytimeFeelsAvg(lastData.hourly, dayDate, m.MAXT);
+    $('feelAvg').textContent = fAvg != null ? `${fAvg}℃` : '--℃';
+    // 風速（1日の最大）
+    const wMax = dayWindMax(lastData.hourly, dayDate);
+    $('wxWind').textContent = wMax != null ? `${wMax} m/s` : '-- m/s';
+
+    const popAm = card ? card.popAm : null;
+    const popPm = card ? card.popPm : null;
+    $('wxPopAm').textContent = popAm === null || popAm === undefined ? `${m.POP}%` : `${popAm}%`;
+    $('wxPopPm').textContent = popPm === null || popPm === undefined ? `${m.POP}%` : `${popPm}%`;
+    $('wxPrec').textContent = `${m.PREC}ミリ`;
+
+    renderTomorrowClothes();
+    renderNextRain();
+    renderWeek();
+    renderLocBtn();
+  }
+
+  // 明日の服装（9時〜16時の平均体感温度で判定し、トップスとボトムスを表示）＋ 8時・14時・20時の体感温度
+  function renderTomorrowClothes() {
+    const e = dayEntry(1) || dayEntry(0);
+    if (!e) return;
+    const m = e.mrf;
+    const dayDate = dateOfEntry(e);
+    const avg = daytimeFeelsAvg(lastData.hourly, dayDate, m.MAXT);
+    const wAvg = daytimeWindAvg(lastData.hourly, dayDate);
+    const o = workOutfitFor(judgeTemp(avg, wAvg));
+    $('clothesBands').innerHTML =
+      `<div class="om-row"><span class="om-k">トップス</span><span class="om-v">${o.tops}</span></div>` +
+      `<div class="om-row"><span class="om-k">ボトムス</span><span class="om-v">${o.bottoms}</span></div>`;
+    const feels = [
+      feelsAt(dayDate, 8, m.MINT),
+      feelsAt(dayDate, 14, m.MAXT),
+      feelsAt(dayDate, 20, Math.round((m.MINT + m.MAXT) / 2))
+    ];
+    $('feel8').textContent = feels[0] != null ? `${feels[0]}℃` : '--℃';
+    $('feel14').textContent = feels[1] != null ? `${feels[1]}℃` : '--℃';
+    $('feel20').textContent = feels[2] != null ? `${feels[2]}℃` : '--℃';
+
+    const card = e.card;
+    const popAm = card && card.popAm != null ? card.popAm : m.POP;
+    const popPm = card && card.popPm != null ? card.popPm : m.POP;
+    const adv = umbrellaAdvice(popAm, popPm);
+    const ua = $('umbrellaAdvice');
+    ua.className = 'advice ' + adv.cls;
+    ua.textContent = adv.text;
+  }
+
+  function renderNextRain() {
+    const el = $('nextRain');
+    if (!lastData) return;
+    const now = new Date();
+    const nr = findNextRain(lastData.hourly || [], lastData.week || [], now);
+    if (nr.type === 'hourly') {
+      const label = dayLabel(nr.startDt, now);
+      let txt = `<span class="big">☂️ 次の雨は ${label} ${nr.startDt.getHours()}時ごろから</span>`;
+      if (nr.endDt && nr.endDt > nr.startDt) {
+        const endLabel = dayLabel(nr.endDt, now);
+        txt += `<br>${endLabel === label ? '' : endLabel + ' '}${nr.endDt.getHours() + 1}時ごろまで降る見込みです。`;
+      }
+      if (nr.maxMm > 0) txt += `<br>強さの目安：1時間に最大 約${nr.maxMm}ミリ`;
+      el.innerHTML = txt;
+    } else if (nr.type === 'week') {
+      const label = dayLabel(nr.date, now);
+      el.innerHTML = `<span class="big">☂️ しばらく雨はなさそうです</span><br>次の雨は ${label} ごろの見込みです${nr.pop != null ? `（降水確率 ${nr.pop}%）` : ''}。`;
+    } else {
+      el.innerHTML = `<span class="big">☀️ 雨の予報はありません</span><br>週間予報の範囲では、雨の日はなさそうです。`;
+    }
+  }
+
+  function renderWeek() {
+    const el = $('weekList');
+    if (!lastData || !lastData.week || !lastData.week.length) {
+      el.innerHTML = '<p class="note">週間予報を取得できませんでした。</p>';
+      return;
+    }
+    const today = jstNow().getUTCDate();
+    let html = '';
+    lastData.week.slice(0, 14).forEach((w, i) => {
+      const base = new Date(Date.UTC(jstNow().getUTCFullYear(), jstNow().getUTCMonth(), today + i));
+      const label = `${base.getUTCMonth() + 1}/${base.getUTCDate()}（${'日月火水木金土'[base.getUTCDay()]}）`;
+      const pop = w.rainUnit === '%' ? `降水確率 ${w.rainVal}%` : (w.rainVal ? `降水 ${w.rainVal}ミリ` : '');
+      html += `<div class="week-row"><span class="d">${label}</span><span class="e">${wxEmoji(w.wx)}</span>` +
+        `<span class="hi">${w.high ?? '--'}℃</span><span>/</span><span class="lo">${w.low ?? '--'}℃</span>` +
+        `<span class="pop">${pop}</span></div>`;
+    });
+    el.innerHTML = html;
+  }
+
+  // 1時間毎ポップアップ（mode: 'all'=予報全体 / 'rain'=雨予報）
+  function openHourly(mode) {
+    const offset = currentDay === 'today' ? 0 : 1;
+    const e = dayEntry(offset);
+    if (!e || !lastData) return;
+    const dayDate = dateOfEntry(e);
+    const rows = (lastData.hourly || []).filter(r => sameDay(r.date, dayDate));
+    const d = dateFromMrfTm(e.mrf.tm);
+    const dayName = `${d.mo}月${d.d}日（${d.dow}）${currentDay === 'today' ? '・今日' : '・明日'}`;
+    if (!rows.length) {
+      $('hourlyTitle').textContent = mode === 'rain' ? '☔ 1時間毎の雨予報' : '🕐 1時間毎の予報';
+      $('hourlyBody').innerHTML = '<p class="note">1時間予報を取得できませんでした。</p>';
+      openModal('hourlyModal');
+      return;
+    }
+    if (mode === 'rain') {
+      $('hourlyTitle').textContent = `☔ 1時間毎の雨予報（${dayName}）`;
+      const total = rows.reduce((a, r) => a + (r.rainMm || 0), 0);
+      let html = `<p class="note" style="margin-bottom:6px;">1日の降水量の合計（予報）：約${Math.round(total * 10) / 10}ミリ</p>`;
+      html += '<table class="mini"><tr><th>時</th><th>天気</th><th>降水量ミリ</th></tr>';
+      rows.forEach(r => {
+        const rainy = r.rainMm != null && r.rainMm > 0;
+        html += `<tr${rainy ? ' class="rainy"' : ''}><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.rainMm ?? '--'}</td></tr>`;
+      });
+      html += '</table>';
+      $('hourlyBody').innerHTML = html;
+    } else {
+      $('hourlyTitle').textContent = `🕐 1時間毎の予報（${dayName}）`;
+      let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温℃</th><th>体感℃</th><th>風速m/s</th><th>降水ミリ</th></tr>';
+      rows.forEach(r => {
+        const fl = r.temp != null ? feelsLike(r.temp, r.windSpd) : null;
+        html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td>${fl ?? '--'}</td><td>${r.windSpd ?? '--'}</td><td>${r.rainMm ?? '--'}</td></tr>`;
+      });
+      html += '</table>';
+      $('hourlyBody').innerHTML = html;
+    }
+    openModal('hourlyModal');
+  }
+
+  function setDay(day) {
+    currentDay = day;
+    $('tabToday').className = day === 'today' ? 'on' : '';
+    $('tabTomorrow').className = day === 'tomorrow' ? 'on' : '';
+    render();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadLocations();
+    renderLocations();
+    renderLocBtn();
+    // 既存の「緯度・経度」表記の地点は、住所表記へ自動変換する（初回のみ・ベストエフォート）
+    locations.filter(l => /^緯度/.test(l.addr || '')).forEach(l => {
+      reverseGeocode(l.lat, l.lon).then(a => {
+        if (a) { l.addr = a; saveLocations(); renderLocations(); }
+      });
+    });
+    $('locOpenBtn').addEventListener('click', () => openModal('locModal'));
+    $('wxMain').addEventListener('click', () => openModal('weekModal'));
+    $('windCell').addEventListener('click', () => openHourly('all'));
+    $('precCell').addEventListener('click', () => openHourly('rain'));
+    document.querySelectorAll('[data-close]').forEach(btn => {
+      btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close')));
+    });
+    document.querySelectorAll('.overlay').forEach(ov => {
+      ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.add('hidden'); });
+    });
+    $('addLocBtn').addEventListener('click', addLocation);
+    $('locAddr').addEventListener('keydown', (e) => { if (e.key === 'Enter') addLocation(); });
+    $('geoBtn').addEventListener('click', useCurrentLocation);
+    $('refreshBtn').addEventListener('click', () => refresh(false));
+    $('tabToday').addEventListener('click', () => setDay('today'));
+    $('tabTomorrow').addEventListener('click', () => setDay('tomorrow'));
+    refresh(true);
+  });
+}
+
+/* Node等での検証用エクスポート */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { parseDayCards, parseHourly, parseWeek, parsePlaceName, workOutfitFor, judgeTemp, umbrellaAdvice, wxText, wxEmoji, feelsLike, findNextRain, daytimeFeelsAvg, daytimeWindAvg, dayWindMax, dateFromMrfTm };
 }
 </script>
-
-</head>
-<body class="mode-80">
-
-    <div id="toast">コピーしました</div>
-
-    <div class="main-container">
-        <div class="app-header">
-            <span class="title">80°エルボ計算</span>
-            <span class="subtitle">KYOWA ROOF</span>
-        </div>
-
-        <div class="tab-wrapper">
-            <div class="tab-container">
-                <button class="tab-button active" id="nav-80" onclick="switchTab('80')">80°エルボ</button>
-                <button class="tab-button" id="nav-80leg" onclick="switchTab('80leg')">足付 80°</button>
-                <button class="tab-button" id="nav-dist" onclick="switchTab('dist')">距離計算</button>
-            </div>
-        </div>
-
-        <div class="result-box result-box-main" onclick="copyResult()">
-            <div class="result-label-left" id="result-label">切寸法</div>
-            <div class="result-value">
-                <span id="result-val">---</span>
-                <span class="text-xs font-bold opacity-70 ml-1">mm</span>
-            </div>
-        </div>
-
-        <!-- 入力セクション -->
-        <div id="section-elbow">
-            <div class="cell-grid">
-                <div class="calc-cell">
-                    <span class="input-label-left">サイズ</span>
-                    <select id="elbow-size" class="input-value" onchange="syncAndCalcSize(this.value)">
-                        <option value="75">75</option>
-                        <option value="100" selected>100</option>
-                        <option value="125">125</option>
-                    </select>
-                </div>
-                <div class="calc-cell" style="background: #0d0d0f;">
-                    <span class="input-label-left">重寸法</span>
-                    <span class="input-value text-zinc-600" id="d-val">--</span>
-                </div>
-                <div class="calc-cell span-2" id="cell-leg-input" style="display: none;" onclick="focusInput('leg-input')">
-                    <span class="input-label-left">足</span>
-                    <div id="leg-input" class="input-value">0</div>
-                </div>
-                <div class="calc-cell span-6 focused" id="cell-main-input" onclick="focusInput('main-input')">
-                    <span class="input-label-left">芯-芯寸法</span>
-                    <div id="main-input" class="input-value">0</div>
-                </div>
-            </div>
-        </div>
-
-        <div id="section-dist" class="hidden">
-            <div class="cell-grid">
-                <div class="calc-cell span-3" id="cell-dist-b" onclick="focusInput('dist-input-b')">
-                    <span class="input-label-left">足長</span>
-                    <div id="dist-input-b" class="input-value">0</div>
-                </div>
-                <div class="calc-cell span-3">
-                    <span class="input-label-left">サイズ</span>
-                    <select id="dist-select-x" class="input-value" onchange="syncAndCalcSize(this.options[this.selectedIndex].text)">
-                        <option value="45">75</option>
-                        <option value="57" selected>100</option>
-                        <option value="70">125</option>
-                    </select>
-                </div>
-                <div class="calc-cell span-3" id="cell-dist-h" onclick="focusInput('dist-input-h')">
-                    <span class="input-label-left">直線</span>
-                    <div id="dist-input-h" class="input-value">0</div>
-                </div>
-                <div class="calc-cell span-3" id="cell-dist-a" onclick="focusInput('dist-input-a')">
-                    <span class="input-label-left">移動</span>
-                    <div id="dist-input-a" class="input-value">0</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="keypad-container">
-            <button class="key-btn" onclick="pressKey('7')">7</button>
-            <button class="key-btn" onclick="pressKey('8')">8</button>
-            <button class="key-btn" onclick="pressKey('9')">9</button>
-            <button class="key-btn gray" id="delete-btn-label" onclick="pressKey('backspace')">貼付</button>
-            
-            <button class="key-btn" onclick="pressKey('4')">4</button>
-            <button class="key-btn" onclick="pressKey('5')">5</button>
-            <button class="key-btn" onclick="pressKey('6')">6</button>
-            <button class="key-btn gray" onclick="pressKey('clear')">AC</button>
-            
-            <button class="key-btn" onclick="pressKey('1')">1</button>
-            <button class="key-btn" onclick="pressKey('2')">2</button>
-            <button class="key-btn" onclick="pressKey('3')">3</button>
-            <button class="key-btn orange row-span-2 h-full" id="enter-btn-label" onclick="pressKey('enter')">保存</button>
-            
-            <button class="key-btn" onclick="pressKey('0')">0</button>
-            <button class="key-btn" onclick="pressKey('00')">00</button>
-            <button class="key-btn" onclick="pressKey('.')">.</button>
-        </div>
-
-        <!-- 図面 -->
-        <div id="dist-diagram-wrapper" class="diagram-container hidden">
-            <svg viewBox="0 0 360 210" class="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
-                <line x1="100" y1="10" x2="160" y2="10" stroke="white" stroke-width="2" />
-                <line x1="140" y1="10" x2="140" y2="25" stroke="white" stroke-width="2" />
-                <circle cx="140" cy="45" r="16.2" fill="none" stroke="white" stroke-width="2" />
-                <line x1="140" y1="45" x2="280" y2="125" stroke="white" stroke-width="3" />
-                <rect x="175" y="60" width="80" height="34" rx="6" fill="black" stroke="white" stroke-width="1.5" />
-                <text id="dist-diagram-result" x="215" y="84" fill="white" font-size="22" font-weight="700" text-anchor="middle">---</text>
-                <circle cx="280" cy="125" r="16.2" fill="none" stroke="white" stroke-width="2" />
-                <line x1="100" y1="10" x2="140" y2="10" stroke="#3b82f6" stroke-width="1" opacity="0.5" />
-                <line x1="100" y1="125" x2="280" y2="125" stroke="#3b82f6" stroke-width="1" opacity="0.5" />
-                <line x1="100" y1="10" x2="100" y2="125" stroke="#3b82f6" stroke-width="2.5" />
-                <line x1="95" y1="10" x2="105" y2="10" stroke="#3b82f6" stroke-width="2.5" />
-                <line x1="95" y1="125" x2="105" y2="125" stroke="#3b82f6" stroke-width="2.5" />
-                <text x="5" y="75" fill="#3b82f6" font-size="16" font-weight="bold">直線距離</text>
-                <line x1="140" y1="45" x2="140" y2="155" stroke="#3b82f6" stroke-width="1" opacity="0.5" />
-                <line x1="280" y1="125" x2="280" y2="155" stroke="#3b82f6" stroke-width="1" opacity="0.5" />
-                <line x1="140" y1="155" x2="280" y2="155" stroke="#3b82f6" stroke-width="2.5" />
-                <line x1="140" y1="150" x2="140" y2="160" stroke="#3b82f6" stroke-width="2.5" />
-                <line x1="280" y1="150" x2="280" y2="160" stroke="#3b82f6" stroke-width="2.5" />
-                <text x="210" y="195" fill="#3b82f6" font-size="16" font-weight="bold" text-anchor="middle">移動寸法</text>
-            </svg>
-        </div>
-
-        <div id="history-area" class="history-area">
-            <div id="history-content-wrapper">
-                <div class="history-header">
-                    <span>最近の計算履歴</span>
-                    <button onclick="clearHistory()" class="text-red-500">履歴削除</button>
-                </div>
-                <div id="main-history-list"></div>
-            </div>
-            <div class="app-footer-bar">
-                <span>80°エルボ・距離電卓</span>
-                <span>KYOWA ROOF</span>
-            </div>
-        </div>
-    </div>
-
 <script>
-    let currentTab = '80';
-    let focusedInputId = 'main-input-80';
-    let isOverwriteMode = true;
-    const storageKey = 'kyowa_80_dist_unified_v8';
-    const lastTabKey = 'kyowa_80_last_tab';
-    
-    const inputs = {
-        'main-input-80': '',
-        'main-input-80leg': '',
-        'leg-input-80leg': '',
-        'dist-input-b': '',
-        'dist-input-h': '',
-        'dist-input-a': ''
-    };
-
-    let histories = JSON.parse(localStorage.getItem(storageKey)) || [];
-
-    const elbowData = { 75: { d: 30, e: 82 }, 100: { d: 40, e: 103 }, 125: { d: 50, e: 130 } };
-    const legConstants = { "75": 45, "100": 57, "125": 70 };
-    const cos10 = Math.cos(10 * Math.PI / 180);
-
-    function syncAndCalcSize(val) {
-        document.getElementById('elbow-size').value = val;
-        const distSelect = document.getElementById('dist-select-x');
-        for(let i=0; i<distSelect.options.length; i++) {
-            if(distSelect.options[i].text === val) {
-                distSelect.selectedIndex = i;
-                break;
-            }
-        }
-        distCalc();
-        elbowCalc();
-    }
-
-    function focusInput(id) {
-        let internalId = id;
-        if (id === 'main-input') internalId = `main-input-${currentTab}`;
-        if (id === 'leg-input') internalId = `leg-input-${currentTab}`;
-        
-        document.querySelectorAll('.calc-cell').forEach(el => el.classList.remove('focused'));
-        
-        const targetId = (id.startsWith('main-input')) ? 'main-input' : (id.startsWith('leg-input') ? 'leg-input' : id);
-        const target = document.getElementById(targetId);
-        
-        if (target) {
-            target.closest('.calc-cell').classList.add('focused');
-            focusedInputId = internalId;
-            isOverwriteMode = true;
-        }
-
-        const enterLabel = document.getElementById('enter-btn-label');
-        if (currentTab === '80leg') {
-            enterLabel.innerText = (focusedInputId === 'leg-input-80leg') ? '⏎' : '保存';
-        } else if (currentTab === 'dist') {
-            enterLabel.innerText = '⏎';
-        } else {
-            enterLabel.innerText = '保存';
-        }
-    }
-
-    async function pressKey(key) {
-        let val = inputs[focusedInputId] || '';
-        
-        if (key === 'clear') {
-            if (currentTab === 'dist') {
-                clearDistFields();
-                return;
-            }
-            val = '';
-            isOverwriteMode = false;
-        } else if (key === 'backspace') {
-            if (currentTab === 'dist') { 
-                val = ''; 
-                isOverwriteMode = false;
-            } else { 
-                try {
-                    const text = await navigator.clipboard.readText();
-                    const cleanText = text.replace(/[^0-9.]/g, '');
-                    if (cleanText) {
-                        val = cleanText;
-                        isOverwriteMode = false;
-                        showToast("貼り付けました");
-                    } else {
-                        showToast("数値が見つかりません");
-                        return;
-                    }
-                } catch (err) {
-                    showToast("貼り付けに失敗しました");
-                    return;
-                }
-            }
-        } else if (key === 'enter') {
-            handleEnter(); return;
-        } else {
-            if (isOverwriteMode) {
-                if (key === '.') val = '0.';
-                else val = key;
-                isOverwriteMode = false;
-            } else {
-                if (key === '.') {
-                    if (!val.toString().includes('.')) val += val === '' ? '0.' : '.';
-                } else {
-                    if (val === '0') val = key;
-                    else val += key;
-                }
-            }
-        }
-        
-        inputs[focusedInputId] = val;
-        const displayTarget = (focusedInputId.startsWith('main-input')) ? 'main-input' : (focusedInputId.startsWith('leg-input') ? 'leg-input' : focusedInputId);
-        updateDisplay(displayTarget, val);
-        
-        if (currentTab === 'dist') distCalc();
-        else elbowCalc();
-    }
-
-    function clearDistFields() {
-        ['dist-input-b', 'dist-input-h', 'dist-input-a'].forEach(id => { inputs[id] = ''; updateDisplay(id, ''); });
-        distCalc();
-        showToast("すべてクリアしました");
-        isOverwriteMode = true;
-    }
-
-    function handleEnter() {
-        if (currentTab !== 'dist') {
-            if (currentTab === '80leg' && focusedInputId === 'leg-input-80leg') {
-                focusInput('main-input');
-            } else {
-                saveHistory();
-            }
-        } else {
-            if (focusedInputId === 'dist-input-h') focusInput('dist-input-a');
-            else if (focusedInputId === 'dist-input-a') focusInput('dist-input-b');
-            else focusInput('dist-input-h');
-        }
-    }
-
-    function updateDisplay(id, val) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        if (val === '' || val === null) { el.innerText = '0'; el.style.opacity = '0.3'; }
-        else { el.innerText = formatNum(val); el.style.opacity = '1'; }
-    }
-
-    function formatNum(num) {
-        if (!num && num !== 0) return "";
-        const parts = num.toString().split(".");
-        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        return parts.join(".");
-    }
-
-    function switchTab(tabId) {
-        currentTab = tabId;
-        localStorage.setItem(lastTabKey, tabId);
-
-        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
-        const navBtn = document.getElementById(`nav-${tabId}`);
-        if(navBtn) navBtn.classList.add('active');
-        
-        const sectionElbow = document.getElementById('section-elbow');
-        const sectionDist = document.getElementById('section-dist');
-        const diagWrapper = document.getElementById('dist-diagram-wrapper');
-        const historyWrapper = document.getElementById('history-content-wrapper');
-        const deleteBtn = document.getElementById('delete-btn-label');
-        
-        const cellMain = document.getElementById('cell-main-input');
-        const cellLeg = document.getElementById('cell-leg-input');
-
-        document.body.className = `mode-${tabId}`;
-
-        if (tabId === 'dist') {
-            sectionElbow.classList.add('hidden');
-            sectionDist.classList.remove('hidden');
-            diagWrapper.classList.remove('hidden');
-            historyWrapper.classList.add('hidden');
-            deleteBtn.innerText = 'C';
-            document.getElementById('result-label').innerText = "芯-芯寸法";
-            focusInput('dist-input-h'); 
-            distCalc();
-        } else {
-            sectionElbow.classList.remove('hidden');
-            sectionDist.classList.add('hidden');
-            diagWrapper.classList.add('hidden');
-            historyWrapper.classList.remove('hidden');
-            deleteBtn.innerText = '貼付';
-            document.getElementById('result-label').innerText = "切寸法";
-            
-            if (tabId === '80leg') {
-                cellMain.classList.remove('span-6');
-                cellMain.classList.add('span-4');
-                cellLeg.style.display = 'flex';
-                cellLeg.classList.add('span-2');
-                updateDisplay('leg-input', inputs[`leg-input-${tabId}`]);
-            } else {
-                cellMain.classList.remove('span-4');
-                cellMain.classList.add('span-6');
-                cellLeg.style.display = 'none';
-            }
-            
-            updateDisplay('main-input', inputs[`main-input-${tabId}`]);
-            focusInput(tabId === '80leg' ? 'leg-input' : 'main-input');
-            elbowCalc();
-            renderHistory();
-        }
-    }
-
-    function elbowCalc() {
-        const size = document.getElementById('elbow-size').value;
-        const data = elbowData[size];
-        if(!data) return;
-        const { d, e } = data;
-        document.getElementById('d-val').innerText = d;
-        
-        // 常に元の計算式を維持 (入力値 / cos10)
-        const targetInputKey = (currentTab === 'dist') ? 'main-input-80' : `main-input-${currentTab}`;
-        const inputVal = parseFloat(inputs[targetInputKey]);
-        const resultEl = document.getElementById('result-val');
-        if (!inputVal) { resultEl.innerText = "---"; return; }
-        
-        let f;
-        const modeForCalc = (currentTab === 'dist') ? '80' : currentTab;
-        if (modeForCalc === '80') {
-            f = (inputVal / cos10) - ((e - d) * 2);
-        } else {
-            const legVal = parseFloat(inputs[`leg-input-80leg`]) || 0;
-            const sizeConst = legConstants[size];
-            const c = inputVal - (legVal + sizeConst);
-            f = (c / cos10) - ((e - d) * 2);
-        }
-        
-        // 距離計算タブのときは結果表示を上書きしない
-        if (currentTab !== 'dist') {
-            resultEl.innerText = formatNum(Math.ceil(f));
-        }
-    }
-
-    function distCalc() {
-        // エルボ計算アプリと全く同じロジック
-        const b = parseFloat(inputs['dist-input-b']) || 0; 
-        const h = parseFloat(inputs['dist-input-h']);      
-        const a = parseFloat(inputs['dist-input-a']);      
-        const x = parseFloat(document.getElementById('dist-select-x').value); 
-        
-        const resValEl = document.getElementById('result-val');
-        const diagResEl = document.getElementById('dist-diagram-result');
-        
-        if (isNaN(h) || isNaN(a)) {
-            if (currentTab === 'dist') resValEl.innerText = "---";
-            if (diagResEl) diagResEl.textContent = "---";
-            return;
-        }
-
-        // 芯-芯寸法 = sqrt((直線 - (足長 + エルボ))^2 + 移動^2)
-        const resultValueNum = Math.ceil(Math.sqrt(Math.pow(h - (b + x), 2) + Math.pow(a, 2)));
-        const resFormatted = formatNum(resultValueNum);
-        
-        if (currentTab === 'dist') {
-            resValEl.innerText = resFormatted;
-            if(diagResEl) diagResEl.textContent = resFormatted;
-        }
-
-        // 連動
-        const resStr = resultValueNum.toString();
-        inputs['main-input-80'] = resStr;
-        inputs['main-input-80leg'] = resStr;
-
-        elbowCalc();
-    }
-
-    function saveHistory() {
-        const inputKey = `main-input-${currentTab}`;
-        const inputStr = formatNum(inputs[inputKey]);
-        const result = document.getElementById('result-val').innerText;
-        const sizeEl = document.getElementById('elbow-size');
-        const sizeStr = sizeEl.options[sizeEl.selectedIndex].text;
-        if (result === "---" || !inputs[inputKey]) return;
-        
-        const nonLockedCount = histories.filter(h => h.mode === currentTab && !h.locked).length;
-        if (nonLockedCount >= 10) {
-            const oldestIdx = histories.findIndex(h => h.mode === currentTab && !h.locked);
-            if (oldestIdx !== -1) histories.splice(oldestIdx, 1);
-        }
-        
-        histories.push({
-            id: Date.now(), mode: currentTab, size: sizeStr, input: inputStr,
-            leg: (currentTab === '80leg' ? formatNum(inputs[`leg-input-${currentTab}`]) : null),
-            result, locked: false
-        });
-        localStorage.setItem(storageKey, JSON.stringify(histories));
-        
-        renderHistory();
-        showToast("保存しました");
-        isOverwriteMode = true; 
-    }
-
-    function toggleLock(id) {
-        const item = histories.find(h => h.id === id);
-        if (item) {
-            item.locked = !item.locked;
-            localStorage.setItem(storageKey, JSON.stringify(histories));
-            renderHistory();
-        }
-    }
-
-    function renderHistory() {
-        if (currentTab === 'dist') return;
-        const listEl = document.getElementById('main-history-list');
-        listEl.innerHTML = "";
-        const filtered = histories.filter(h => h.mode === currentTab).sort((a, b) => (b.locked - a.locked) || (b.id - a.id));
-        if (!filtered.length) {
-            listEl.innerHTML = '<div class="text-center py-4 text-zinc-800 text-[11px] font-bold">履歴はありません</div>';
-            return;
-        }
-        filtered.forEach(item => {
-            const div = document.createElement('div');
-            div.className = `history-item ${item.locked ? 'is-locked' : ''}`;
-            const lockIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
-            const legText = item.leg ? ` 足:${item.leg}` : "";
-            div.innerHTML = `
-                <button onclick="toggleLock(${item.id})" class="lock-btn ${item.locked ? 'active' : 'text-zinc-500'}">${lockIcon}</button>
-                <div class="flex flex-col flex-1">
-                    <span class="text-[14px] font-bold" style="color: var(--ios-silver)">${item.size} / 芯-芯:${item.input}${legText}</span>
-                    <span class="font-black text-2xl">${item.result}</span>
-                </div>
-                <button onclick=\"copyRaw('${item.result}')\" class=\"p-3\">
-                    <svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#666\" stroke-width=\"2.5\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\" ry=\"2\"></rect><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"></path></svg>
-                </button>`;
-            listEl.appendChild(div);
-        });
-    }
-
-    function clearHistory() {
-        histories = histories.filter(h => h.mode !== currentTab || h.locked);
-        localStorage.setItem(storageKey, JSON.stringify(histories));
-        renderHistory();
-        showToast("未保護の履歴を削除しました");
-    }
-
-    function copyResult() { 
-        const val = document.getElementById('result-val').innerText;
-        copyRaw(val);
-    }
-    function copyRaw(val) {
-        if (val === "---" || val === "エラー") return;
-        const cleanVal = val.replace(/,/g, "");
-        const temp = document.createElement('textarea');
-        temp.value = cleanVal;
-        document.body.appendChild(temp);
-        temp.select();
-        document.execCommand('copy');
-        document.body.removeChild(temp);
-        showToast("コピーしました");
-    }
-
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        if(t) {
-            t.innerText = msg;
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 1000);
-        }
-    }
-
-    window.onload = () => { 
-        const lastTab = localStorage.getItem(lastTabKey);
-        if (lastTab && (lastTab === '80' || lastTab === '80leg' || lastTab === 'dist')) {
-            switchTab(lastTab);
-        } else {
-            focusInput('main-input'); 
-            elbowCalc(); 
-            renderHistory();
-        }
-    };
+/* PWA: Service Worker登録（更新検出時は一度だけ自動リロード） */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const hadController = !!navigator.serviceWorker.controller;
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => {
+        reg.update();
+        setInterval(() => { reg.update(); }, 60 * 60 * 1000);
+      })
+      .catch(() => {});
+  });
+}
 </script>
-
-<button id="installBtn" aria-label="このアプリをインストール">アプリをインストール</button>
-<script>
-(function() {
-  let deferredPrompt = null;
-  const btn = document.getElementById('installBtn');
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-
-  window.addEventListener('beforeinstallprompt', function(e) {
-    e.preventDefault();
-    deferredPrompt = e;
-    if (!isStandalone) btn.style.display = 'block';
-  });
-
-  btn.addEventListener('click', async function() {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    try { await deferredPrompt.userChoice; } catch (e) {}
-    deferredPrompt = null;
-    btn.style.display = 'none';
-  });
-
-  window.addEventListener('appinstalled', function() {
-    btn.style.display = 'none';
-  });
-})();
-</script>
-
 </body>
 </html>
