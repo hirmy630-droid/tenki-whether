@@ -307,7 +307,7 @@ function wxEmoji(code) {
 }
 
 /* ---------- 体感温度（気温と風速から計算する目安） ---------- */
-function feelsLike(temp, windSpd, wx) {
+function feelsLike(temp, windSpd, wx, hour, sun) {
   if (!Number.isFinite(temp)) return null;
   const v = Number.isFinite(windSpd) ? windSpd : 0;
   let base;
@@ -325,9 +325,16 @@ function feelsLike(temp, windSpd, wx) {
     base = temp - Math.min(2.5, 0.5 * v);
   }
   // 天気による補正（指定ルール）：晴れ（100番台）+1℃ / 雨（300番台）−1℃ / 雪（400番台）−2℃
+  // ただし晴れ補正は昼間だけ（日の出〜日の入りの間）。夜間は補正なし
   let adj = 0;
   if (Number.isFinite(wx)) {
-    if (wx >= 100 && wx < 200) adj = 1;
+    if (wx >= 100 && wx < 200) {
+      adj = 1;
+      if (sun && Number.isFinite(hour)) {
+        const mins = hour * 60;
+        if (mins < sun.rise || mins >= sun.set) adj = 0;
+      }
+    }
     else if (wx >= 300 && wx < 400) adj = -1;
     else if (wx >= 400 && wx < 500) adj = -2;
   }
@@ -486,6 +493,17 @@ function dateFromMrfTm(tm) {
   const d = new Date(tm * 1000 + 9 * 60 * 60 * 1000);
   return { y: d.getUTCFullYear(), mo: d.getUTCMonth() + 1, d: d.getUTCDate(), dow: '日月火水木金土'[d.getUTCDay()] };
 }
+// "06:12" のような日の出・日の入り文字列を、0時からの分数に変換する
+function sunMinutes(str) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(str || '');
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+// 日別予報（MRF）から、その日の日の出・日の入りの範囲を返す。取れなければ null
+function sunRange(mrf) {
+  const rise = sunMinutes(mrf && mrf.sunrise);
+  const set = sunMinutes(mrf && mrf.sunset);
+  return rise != null && set != null ? { rise, set } : null;
+}
 function sameDay(a, b) {
   return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
@@ -541,13 +559,13 @@ function findNextRain(hourly, week, now) {
 }
 
 // 9時〜16時の体感温度の平均（1時間予報から）。取れない場合は昼（14時）→最高気温の順で代替
-function daytimeFeelsAvg(hourly, dateObj, fallbackTemp) {
+function daytimeFeelsAvg(hourly, dateObj, fallbackTemp, sun) {
   if (hourly && hourly.length) {
     const rows = hourly.filter(r => sameDay(r.date, dateObj) && r.time >= 9 && r.time <= 16 && r.temp != null);
-    const vals = rows.map(r => feelsLike(r.temp, r.windSpd, r.wx)).filter(v => v != null);
+    const vals = rows.map(r => feelsLike(r.temp, r.windSpd, r.wx, r.time, sun)).filter(v => v != null);
     if (vals.length) return Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
     const r14 = hourly.find(r => sameDay(r.date, dateObj) && r.time === 14);
-    if (r14 && r14.temp != null) return feelsLike(r14.temp, r14.windSpd, r14.wx);
+    if (r14 && r14.temp != null) return feelsLike(r14.temp, r14.windSpd, r14.wx, r14.time, sun);
   }
   if (Number.isFinite(fallbackTemp)) return feelsLike(fallbackTemp, 0);
   return null;
@@ -784,9 +802,9 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     if (!lastData || !lastData.hourly) return null;
     return lastData.hourly.find(r => sameDay(r.date, dateObj) && r.time === hour) || null;
   }
-  function feelsAt(dateObj, hour, fallbackTemp) {
+  function feelsAt(dateObj, hour, fallbackTemp, sun) {
     const r = hourlyRow(dateObj, hour);
-    if (r && r.temp != null) return feelsLike(r.temp, r.windSpd, r.wx);
+    if (r && r.temp != null) return feelsLike(r.temp, r.windSpd, r.wx, hour, sun);
     if (Number.isFinite(fallbackTemp)) return feelsLike(fallbackTemp, 0);
     return null;
   }
@@ -811,7 +829,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     $('wxLow').textContent = `${m.MINT}℃`;
 
     // 体感温度（9時〜16時の平均）
-    const fAvg = daytimeFeelsAvg(lastData.hourly, dayDate, m.MAXT);
+    const fAvg = daytimeFeelsAvg(lastData.hourly, dayDate, m.MAXT, sunRange(m));
     $('feelAvg').textContent = fAvg != null ? `${fAvg}℃` : '--℃';
     // 風速（1日の最大）
     const wMax = dayWindMax(lastData.hourly, dayDate);
@@ -835,16 +853,17 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     if (!e) return;
     const m = e.mrf;
     const dayDate = dateOfEntry(e);
-    const avg = daytimeFeelsAvg(lastData.hourly, dayDate, m.MAXT);
+    const sun = sunRange(m);
+    const avg = daytimeFeelsAvg(lastData.hourly, dayDate, m.MAXT, sun);
     const wAvg = daytimeWindAvg(lastData.hourly, dayDate);
     const o = workOutfitFor(judgeTemp(avg, wAvg));
     $('clothesBands').innerHTML =
       `<div class="om-row"><span class="om-k">トップス</span><span class="om-v">${o.tops}</span></div>` +
       `<div class="om-row"><span class="om-k">ボトムス</span><span class="om-v">${o.bottoms}</span></div>`;
     const feels = [
-      feelsAt(dayDate, 8, m.MINT),
-      feelsAt(dayDate, 14, m.MAXT),
-      feelsAt(dayDate, 20, Math.round((m.MINT + m.MAXT) / 2))
+      feelsAt(dayDate, 8, m.MINT, sun),
+      feelsAt(dayDate, 14, m.MAXT, sun),
+      feelsAt(dayDate, 20, Math.round((m.MINT + m.MAXT) / 2), sun)
     ];
     $('feel8').textContent = feels[0] != null ? `${feels[0]}℃` : '--℃';
     $('feel14').textContent = feels[1] != null ? `${feels[1]}℃` : '--℃';
@@ -927,7 +946,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     $('hourlyTitle').textContent = `🕐 1時間毎の予報（${dayName}）`;
     let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温℃</th><th>体感℃</th><th>風速m/s</th><th>降水ミリ</th></tr>';
     rows.forEach(r => {
-      const fl = r.temp != null ? feelsLike(r.temp, r.windSpd, r.wx) : null;
+      const fl = r.temp != null ? feelsLike(r.temp, r.windSpd, r.wx, r.time, sunRange(e.mrf)) : null;
       html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td>${fl ?? '--'}</td><td>${r.windSpd ?? '--'}</td><td>${r.rainMm ?? '--'}</td></tr>`;
     });
     html += '</table>';
