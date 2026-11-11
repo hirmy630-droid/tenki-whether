@@ -77,9 +77,6 @@
     display: flex; align-items: center; justify-content: center;
   }
   .tabs button.on { background: #fff; color: #1c1c1e; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-  .tappable { cursor: pointer; border-radius: 12px; }
-  .tappable:active { background: #f2f2f7; }
-  .tap-hint { font-size: 14px; color: #8e8e93; text-align: right; margin-top: 2px; }
   .wx-head { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 2px 4px; }
   .wx-emoji { font-size: 52px; line-height: 1; }
   .wx-text { font-size: 20px; font-weight: 700; }
@@ -99,16 +96,6 @@
   .cell { background: #f2f2f7; border-radius: 12px; padding: 8px 10px; text-align: center; }
   .cell .k { font-size: 14px; color: #6b7280; font-weight: 600; }
   .cell .v { font-size: 17px; font-weight: 700; margin-top: 2px; }
-  .cell.clickable { cursor: pointer; border: 1px solid #dbe7f7; background: #eef5ff; }
-  .cell.clickable:active { transform: scale(0.97); }
-  .cell .hint { font-size: 14px; color: #8e8e93; margin-top: 2px; }
-  .band { border-top: 1px solid #e5e5ea; padding: 8px 2px; display: flex; gap: 10px; }
-  .band:first-of-type { border-top: none; }
-  .band .when { flex: 0 0 64px; text-align: center; }
-  .band .when .w { font-weight: 700; font-size: 15px; }
-  .band .when .tmp { font-size: 14px; color: #ff6a3a; font-weight: 700; margin-top: 2px; }
-  .band .outfit { flex: 1; font-size: 14px; line-height: 1.5; }
-  .band .outfit .o { font-weight: 700; }
   .feels-row {
     margin-top: 8px; background: #fff7e6; border-radius: 12px; padding: 8px 10px;
     display: flex; justify-content: space-around; text-align: center;
@@ -274,11 +261,11 @@
 <script>
 'use strict';
 /* =========================================================
-   明日の服装予報（ウェザーニュース版）
+   天気予報（ウェザーニュース版）
    データ取得：ウェザーニュースの無料公開データ
    - 日別予報JSON: https://site.weathernews.jp/lba/wxdata/api_data_ss1/mrf?lat=&lon=
    - 地点ページHTML: https://weathernews.jp/onebox/{lat}/{lon}/temp=c&lang=ja
-     （今日/明日の天気・午前午後降水確率、1時間予報、週間予報、実況を解析）
+     （今日/明日の天気・午前午後降水確率、1時間予報、週間予報を解析）
    地点の緯度経度変換：国土地理院 住所検索API（無料）
    体感温度：1時間予報の気温と風速から計算した目安
    ========================================================= */
@@ -886,10 +873,11 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       el.innerHTML = '<p class="note">週間予報を取得できませんでした。</p>';
       return;
     }
-    const today = jstNow().getUTCDate();
+    const jn = jstNow();
+    const today = jn.getUTCDate();
     let html = '';
     lastData.week.slice(0, 14).forEach((w, i) => {
-      const base = new Date(Date.UTC(jstNow().getUTCFullYear(), jstNow().getUTCMonth(), today + i));
+      const base = new Date(Date.UTC(jn.getUTCFullYear(), jn.getUTCMonth(), today + i));
       const label = `${base.getUTCMonth() + 1}/${base.getUTCDate()}（${'日月火水木金土'[base.getUTCDay()]}）`;
       const pop = w.rainUnit === '%' ? `降水確率 ${w.rainVal}%` : (w.rainVal ? `降水 ${w.rainVal}ミリ` : '');
       html += `<div class="week-row"><span class="d">${label}</span><span class="e">${wxEmoji(w.wx)}</span>` +
@@ -907,8 +895,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     openModal('radarModal');
   }
 
-  // 1時間毎ポップアップ（mode: 'all'=予報全体 / 'rain'=雨予報）
-  function openHourly(mode) {
+  // 1時間毎ポップアップ
+  function openHourly() {
     const offset = currentDay === 'today' ? 0 : 1;
     const e = dayEntry(offset);
     if (!e || !lastData) return;
@@ -917,32 +905,19 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const d = dateFromMrfTm(e.mrf.tm);
     const dayName = `${d.mo}月${d.d}日（${d.dow}）${currentDay === 'today' ? '・今日' : '・明日'}`;
     if (!rows.length) {
-      $('hourlyTitle').textContent = mode === 'rain' ? '☔ 1時間毎の雨予報' : '🕐 1時間毎の予報';
+      $('hourlyTitle').textContent = '🕐 1時間毎の予報';
       $('hourlyBody').innerHTML = '<p class="note">1時間予報を取得できませんでした。</p>';
       openModal('hourlyModal');
       return;
     }
-    if (mode === 'rain') {
-      $('hourlyTitle').textContent = `☔ 1時間毎の雨予報（${dayName}）`;
-      const total = rows.reduce((a, r) => a + (r.rainMm || 0), 0);
-      let html = `<p class="note" style="margin-bottom:6px;">1日の降水量の合計（予報）：約${Math.round(total * 10) / 10}ミリ</p>`;
-      html += '<table class="mini"><tr><th>時</th><th>天気</th><th>降水量ミリ</th></tr>';
-      rows.forEach(r => {
-        const rainy = r.rainMm != null && r.rainMm > 0;
-        html += `<tr${rainy ? ' class="rainy"' : ''}><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.rainMm ?? '--'}</td></tr>`;
-      });
-      html += '</table>';
-      $('hourlyBody').innerHTML = html;
-    } else {
-      $('hourlyTitle').textContent = `🕐 1時間毎の予報（${dayName}）`;
-      let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温℃</th><th>体感℃</th><th>風速m/s</th><th>降水ミリ</th></tr>';
-      rows.forEach(r => {
-        const fl = r.temp != null ? feelsLike(r.temp, r.windSpd) : null;
-        html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td>${fl ?? '--'}</td><td>${r.windSpd ?? '--'}</td><td>${r.rainMm ?? '--'}</td></tr>`;
-      });
-      html += '</table>';
-      $('hourlyBody').innerHTML = html;
-    }
+    $('hourlyTitle').textContent = `🕐 1時間毎の予報（${dayName}）`;
+    let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温℃</th><th>体感℃</th><th>風速m/s</th><th>降水ミリ</th></tr>';
+    rows.forEach(r => {
+      const fl = r.temp != null ? feelsLike(r.temp, r.windSpd) : null;
+      html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td>${fl ?? '--'}</td><td>${r.windSpd ?? '--'}</td><td>${r.rainMm ?? '--'}</td></tr>`;
+    });
+    html += '</table>';
+    $('hourlyBody').innerHTML = html;
     openModal('hourlyModal');
   }
 
@@ -965,7 +940,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     });
     $('locOpenBtn').addEventListener('click', () => openModal('locModal'));
     $('weeklyBtn').addEventListener('click', () => openModal('weekModal'));
-    $('hourlyBtn').addEventListener('click', () => openHourly('all'));
+    $('hourlyBtn').addEventListener('click', () => openHourly());
     $('radarBtn').addEventListener('click', openRadar);
     document.querySelectorAll('[data-close]').forEach(btn => {
       btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close')));
