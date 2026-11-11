@@ -43,15 +43,15 @@
   .btn-blue:hover { background: #0062cc; }
   .btn-gray { background: #f2f2f7; color: #007aff; border: 1px solid #d1d1d6; width: 100%; min-height: 44px; font-weight: 700; margin-top: 10px; }
   .btn-row3 { display: flex; gap: 8px; margin-top: 10px; }
-  .btn-sub3 { flex: 1; min-height: 44px; background: #f2f2f7; color: #007aff; border: 1px solid #d1d1d6; border-radius: 12px; font-size: 12px; font-weight: 700; cursor: pointer; padding: 6px 2px; }
+  .btn-sub3 { flex: 1; min-height: 36px; background: #f2f2f7; color: #007aff; border: 1px solid #d1d1d6; border-radius: 12px; font-size: 12px; font-weight: 700; cursor: pointer; padding: 4px 2px; }
   .btn-main {
-    width: 100%; height: 46px; font-size: 16px; color: #fff;
+    width: 100%; height: 40px; font-size: 16px; color: #fff;
     background: linear-gradient(90deg, #ff9500, #ff6a3a);
     border-radius: 12px; box-shadow: 0 4px 10px rgba(255,106,58,0.3);
   }
   .btn-main:hover { filter: brightness(1.05); }
   .btn-loc {
-    width: 100%; height: 40px; min-height: 40px; background: #fff; border: 1px solid #d1d1d6; border-radius: 14px;
+    width: 100%; height: 36px; min-height: 36px; background: #fff; border: 1px solid #d1d1d6; border-radius: 14px;
     font-size: 15px; font-weight: 700; color: #1c1c1e; cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: 6px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04); touch-action: manipulation;
@@ -70,7 +70,7 @@
   .loc-item .del { background: none; border: none; color: #ff3b30; font-size: 16px; cursor: pointer; padding: 4px 6px; }
   .status-line { font-size: 14px; color: #6b7280; text-align: center; min-height: 16px; }
   .status-line.err { color: #ff3b30; }
-  .tabs { display: flex; background: #e9e9ee; border-radius: 12px; padding: 3px; gap: 3px; height: 46px; }
+  .tabs { display: flex; background: #e9e9ee; border-radius: 12px; padding: 3px; gap: 3px; height: 38px; }
   .tabs button {
     flex: 1; border: none; background: transparent; padding: 0; font-size: 15px;
     font-weight: 600; color: #4b5563; border-radius: 9px; cursor: pointer;
@@ -86,9 +86,21 @@
   .wx-temps .hi { color: #ff3b30; font-weight: 700; }
   .wx-temps .lo { color: #007aff; font-weight: 700; }
   .feels-strip {
-    margin-top: 8px; background: #fff7e6; border-radius: 12px; padding: 7px 10px;
+    margin-top: 8px; background: #fff7e6; border-radius: 12px; padding: 4px 10px;
     display: flex; align-items: center; gap: 6px; font-size: 14px;
   }
+  .now-strip {
+    display: flex; flex-direction: column; gap: 3px;
+    background: linear-gradient(90deg, #007aff, #38b6ff); color: #fff;
+    border-radius: 12px; padding: 7px 12px; margin-bottom: 8px; font-size: 14px;
+    box-shadow: 0 3px 8px rgba(0, 122, 255, 0.28);
+  }
+  .now-strip .nw-row { display: flex; align-items: center; justify-content: center; gap: 9px; }
+  .now-strip .nw-row #nowWind { margin-left: 7px; }
+  .now-strip .nw-k { font-weight: 700; color: #fff; }
+  .now-strip .nw-e { font-size: 24px; line-height: 1; }
+  .now-strip .nw-v { font-weight: 600; }
+  .now-strip #nowTemp { font-size: 18px; font-weight: 700; }
   .feels-strip .fk { font-weight: 700; color: #92400e; flex: 0 0 auto; }
   .feels-strip .fv { flex: 1; display: flex; justify-content: space-around; font-weight: 700; }
   .feels-strip .fv span b { color: #ff6a3a; }
@@ -159,6 +171,17 @@
 
   <!-- 予報 -->
   <section class="card" id="wxCard">
+    <div class="now-strip">
+      <div class="nw-row">
+        <span class="nw-k">現在の天気</span>
+        <span class="nw-e" id="nowWx">--</span>
+        <span class="nw-v" id="nowTemp">--℃</span>
+      </div>
+      <div class="nw-row">
+        <span class="nw-v" id="nowRain">降水量 --ミリ</span>
+        <span class="nw-v" id="nowWind">風速 --m/s</span>
+      </div>
+    </div>
     <div class="tabs">
       <button type="button" id="tabToday">今日</button>
       <button type="button" id="tabTomorrow" class="on">明日</button>
@@ -815,6 +838,21 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     return new Date(d.y, d.mo - 1, d.d);
   }
 
+  // 現在の天気（今日の1時間予報から、現在時刻の行を表示）
+  function renderNow() {
+    const e = dayEntry(0);
+    if (!e || !lastData || !lastData.hourly) return;
+    const dayDate = dateOfEntry(e);
+    const hour = jstNow().getUTCHours();
+    const rows = lastData.hourly.filter(r => sameDay(r.date, dayDate));
+    if (!rows.length) return;
+    const row = rows.find(r => r.time === hour) || rows.filter(r => r.time <= hour).pop() || rows[0];
+    $('nowWx').textContent = wxEmoji(row.wx);
+    $('nowTemp').textContent = row.temp != null ? `${row.temp}℃` : '--℃';
+    $('nowRain').textContent = `降水量 ${row.rainMm != null ? row.rainMm : 0}ミリ`;
+    $('nowWind').textContent = `風速 ${row.windSpd != null ? row.windSpd : '--'}m/s`;
+  }
+
   function render() {
     if (!lastData) return;
     const offset = currentDay === 'today' ? 0 : 1;
@@ -843,6 +881,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     $('wxPopPm').textContent = popPm === null || popPm === undefined ? `${m.POP}%` : `${popPm}%`;
     $('wxPrec').textContent = `${m.PREC}ミリ`;
 
+    renderNow();
     renderTomorrowClothes();
     renderNextRain();
     renderWeek();
