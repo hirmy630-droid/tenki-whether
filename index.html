@@ -42,6 +42,8 @@
   .btn-blue { background: #007aff; color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
   .btn-blue:hover { background: #0062cc; }
   .btn-gray { background: #f2f2f7; color: #007aff; border: 1px solid #d1d1d6; width: 100%; min-height: 44px; font-weight: 700; margin-top: 10px; }
+  .btn-row3 { display: flex; gap: 8px; margin-top: 10px; }
+  .btn-sub3 { flex: 1; min-height: 44px; background: #f2f2f7; color: #007aff; border: 1px solid #d1d1d6; border-radius: 12px; font-size: 12px; font-weight: 700; cursor: pointer; padding: 6px 2px; }
   .btn-main {
     width: 100%; height: 46px; font-size: 16px; color: #fff;
     background: linear-gradient(90deg, #ff9500, #ff6a3a);
@@ -174,7 +176,7 @@
       <button type="button" id="tabToday">今日</button>
       <button type="button" id="tabTomorrow" class="on">明日</button>
     </div>
-    <div class="tappable" id="wxMain" title="週間・2週間予報を開く">
+    <div id="wxMain">
       <div class="wx-head">
         <div class="wx-emoji" id="wxEmoji">🌤️</div>
         <div>
@@ -200,7 +202,11 @@
     <div style="margin-top:12px;">
       <button type="button" class="btn btn-main" id="refreshBtn">🔄 最新の予報に更新</button>
     </div>
-    <button type="button" class="btn btn-gray" id="radarBtn">🌧️ 雨雲レーダー</button>
+    <div class="btn-row3">
+      <button type="button" class="btn-sub3" id="weeklyBtn">週間予報</button>
+      <button type="button" class="btn-sub3" id="radarBtn">レーダー</button>
+      <button type="button" class="btn-sub3" id="hourlyBtn">1時間予報</button>
+    </div>
     <p class="status-line" id="fetchStatus" style="margin-top:8px;"></p>
   </section>
 
@@ -958,7 +964,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       });
     });
     $('locOpenBtn').addEventListener('click', () => openModal('locModal'));
-    $('wxMain').addEventListener('click', () => openModal('weekModal'));
+    $('weeklyBtn').addEventListener('click', () => openModal('weekModal'));
+    $('hourlyBtn').addEventListener('click', () => openHourly('all'));
     $('windCell').addEventListener('click', () => openHourly('all'));
     $('precCell').addEventListener('click', () => openHourly('rain'));
     $('radarBtn').addEventListener('click', openRadar);
