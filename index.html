@@ -77,10 +77,17 @@
     display: flex; align-items: center; justify-content: center;
   }
   .tabs button.on { background: #fff; color: #1c1c1e; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
-  .wx-head { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 2px 4px; }
+  .wx-head { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; padding: 2px 4px; }
   .wx-emoji { font-size: 52px; line-height: 1; }
   .wx-text { font-size: 20px; font-weight: 700; }
-  .wx-date { font-size: 14px; color: #6b7280; margin-top: 2px; }
+  .wx-date { font-size: 16px; color: #4b5563; margin-top: 8px; text-align: center; }
+  #ptrBar {
+    position: fixed; top: 0; left: 0; right: 0; height: 38px; z-index: 60;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; color: #007aff;
+    background: rgba(242, 242, 247, 0.92);
+    transform: translateY(-100%); pointer-events: none;
+  }
   .wx-temps { display: flex; gap: 16px; margin-top: 2px; padding: 0 4px; justify-content: center; }
   .wx-temps .t { font-size: 15px; }
   .wx-temps .hi { color: #ff3b30; font-weight: 700; }
@@ -105,7 +112,7 @@
   .feels-strip .fv { flex: 1; display: flex; justify-content: space-around; font-weight: 700; }
   .feels-strip .fv span b { color: #ff6a3a; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-  .cell { background: #f2f2f7; border-radius: 12px; padding: 8px 10px; text-align: center; }
+  .cell { background: #f2f2f7; border-radius: 12px; padding: 5px 10px; text-align: center; }
   .cell .k { font-size: 14px; color: #6b7280; font-weight: 600; }
   .cell .v { font-size: 17px; font-weight: 700; margin-top: 2px; }
   .feels-row {
@@ -160,6 +167,7 @@
 </style>
 </head>
 <body>
+<div id="ptrBar">↓ 引っ張って更新</div>
 <div class="wrap">
   <header>
     <h1>天気予報 <span class="h-sub">KYOWA ROOF</span></h1>
@@ -185,12 +193,12 @@
       <button type="button" id="tabToday">今日</button>
       <button type="button" id="tabTomorrow" class="on">明日</button>
     </div>
+    <div class="wx-date" id="wxDate"></div>
     <div id="wxMain">
       <div class="wx-head">
         <div class="wx-emoji" id="wxEmoji">🌤️</div>
         <div>
           <div class="wx-text" id="wxText">読み込み中…</div>
-          <div class="wx-date" id="wxDate"></div>
         </div>
       </div>
       <div class="wx-temps">
@@ -863,7 +871,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const code = card && card.wx ? card.wx : m.WX;
     $('wxEmoji').textContent = wxEmoji(code);
     $('wxText').textContent = (card && card.text) ? card.text : wxText(code);
-    $('wxDate').textContent = `${lastData.placeName || ''} ${d.mo}月${d.d}日（${d.dow}）${currentDay === 'today' ? '・今日' : '・明日'}`;
+    $('wxDate').textContent = `${d.mo}月${d.d}日（${d.dow}）${currentDay === 'today' ? '・今日' : '・明日'}`;
     $('wxHigh').textContent = `${m.MAXT}℃`;
     $('wxLow').textContent = `${m.MINT}℃`;
 
@@ -1025,6 +1033,48 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     $('locAddr').addEventListener('keydown', (e) => { if (e.key === 'Enter') addLocation(); });
     $('geoBtn').addEventListener('click', useCurrentLocation);
     $('refreshBtn').addEventListener('click', () => refresh(false));
+    // 画面に戻ってきたとき、前回の取得から30分以上たっていたら自動で取り直す（裏では動かない）
+    let autoRefreshing = false;
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState !== 'visible' || autoRefreshing) return;
+      const loc = selectedLoc();
+      if (!loc) return;
+      const cached = loadCache(loc);
+      const last = (lastData && lastData.fetchedAt) || (cached && cached.fetchedAt) || 0;
+      if (Date.now() - last < 30 * 60 * 1000) return;
+      autoRefreshing = true;
+      try { await refresh(false); } finally { autoRefreshing = false; }
+    });
+    // 一番上にいるときに下へ引っ張ると更新（プルリフレッシュ）。ポップアップ表示中は無効
+    const ptrBar = $('ptrBar');
+    let ptrStartX = null, ptrStartY = null, ptrDist = 0;
+    const ptrReset = () => { ptrStartX = null; ptrStartY = null; ptrDist = 0; ptrBar.style.transform = 'translateY(-100%)'; };
+    document.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1 || window.scrollY > 0 || document.querySelector('.overlay:not(.hidden)')) { ptrStartX = null; ptrStartY = null; return; }
+      ptrStartX = e.touches[0].clientX; ptrStartY = e.touches[0].clientY; ptrDist = 0;
+    }, { passive: true });
+    document.addEventListener('touchmove', (e) => {
+      if (ptrStartY === null) return;
+      const dy = e.touches[0].clientY - ptrStartY;
+      const dx = Math.abs(e.touches[0].clientX - ptrStartX);
+      if (dy <= 0 || dy < dx) { ptrDist = 0; ptrBar.style.transform = 'translateY(-100%)'; return; }
+      e.preventDefault();
+      ptrDist = Math.min(dy * 0.5, 76);
+      ptrBar.style.transform = `translateY(${ptrDist - 38}px)`;
+      ptrBar.textContent = ptrDist >= 56 ? '離すと更新します' : '↓ 引っ張って更新';
+    }, { passive: false });
+    document.addEventListener('touchend', async () => {
+      if (ptrStartY === null) return;
+      const shouldRefresh = ptrDist >= 56;
+      ptrStartX = null; ptrStartY = null; ptrDist = 0;
+      if (!shouldRefresh) { ptrBar.style.transform = 'translateY(-100%)'; return; }
+      ptrBar.textContent = '更新中…';
+      ptrBar.style.transform = 'translateY(0)';
+      try { await refresh(false); } finally {
+        ptrBar.style.transform = 'translateY(-100%)';
+        ptrBar.textContent = '↓ 引っ張って更新';
+      }
+    });
     $('tabToday').addEventListener('click', () => setDay('today'));
     $('tabTomorrow').addEventListener('click', () => setDay('tomorrow'));
     refresh(true);
