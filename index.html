@@ -660,8 +660,10 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const res = await fetch(GSI_SEARCH_URL(addr));
     if (!res.ok) throw new Error('住所検索に失敗しました');
     const json = await res.json();
-    if (!json.features || !json.features.length) throw new Error('住所が見つかりませんでした');
-    const f = json.features[0];
+    // 国土地理院APIの応答は、Featureの配列そのもの（featuresプロパティは無い）
+    const features = Array.isArray(json) ? json : json.features;
+    if (!features || !features.length) throw new Error('住所が見つかりませんでした');
+    const f = features[0];
     return { lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], title: f.properties.title || addr };
   }
 
