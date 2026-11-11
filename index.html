@@ -80,7 +80,7 @@
   .wx-head { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; padding: 2px 4px; }
   .wx-emoji { font-size: 52px; line-height: 1; }
   .wx-text { font-size: 20px; font-weight: 700; }
-  .wx-date { font-size: 16px; color: #4b5563; margin-top: 8px; text-align: center; }
+  .wx-date { font-size: 17px; line-height: 24px; color: #4b5563; margin-top: 8px; text-align: center; }
   #ptrBar {
     position: fixed; top: 0; left: 0; right: 0; height: 38px; z-index: 60;
     display: flex; align-items: center; justify-content: center;
@@ -89,7 +89,7 @@
     transform: translateY(-100%); pointer-events: none;
   }
   .wx-temps { display: flex; gap: 16px; margin-top: 2px; padding: 0 4px; justify-content: center; }
-  .wx-temps .t { font-size: 15px; }
+  .wx-temps .t { font-size: 17px; line-height: 22px; }
   .wx-temps .hi { color: #ff3b30; font-weight: 700; }
   .wx-temps .lo { color: #007aff; font-weight: 700; }
   .feels-strip {
@@ -99,15 +99,15 @@
   .now-strip {
     display: flex; flex-direction: column; gap: 3px;
     background: linear-gradient(90deg, #007aff, #38b6ff); color: #fff;
-    border-radius: 12px; padding: 7px 12px; margin-bottom: 8px; font-size: 14px;
+    border-radius: 12px; padding: 7px 12px; margin-bottom: 8px; font-size: 17px; line-height: 1.3;
     box-shadow: 0 3px 8px rgba(0, 122, 255, 0.28);
   }
   .now-strip .nw-row { display: flex; align-items: center; justify-content: center; gap: 9px; }
   .now-strip .nw-row #nowWind { margin-left: 7px; }
   .now-strip .nw-k { font-weight: 700; color: #fff; }
-  .now-strip .nw-e { font-size: 24px; line-height: 1; }
+  .now-strip .nw-e { font-size: 25px; line-height: 1; }
   .now-strip .nw-v { font-weight: 600; }
-  .now-strip #nowTemp { font-size: 18px; font-weight: 700; }
+  .now-strip #nowTemp { font-size: 19px; font-weight: 700; }
   .feels-strip .fk { font-weight: 700; color: #92400e; flex: 0 0 auto; }
   .feels-strip .fv { flex: 1; display: flex; justify-content: space-around; font-weight: 700; }
   .feels-strip .fv span b { color: #ff6a3a; }
@@ -131,7 +131,7 @@
   .advice.warn { background: #fff7e6; }
   .nextrain { font-size: 15px; line-height: 1.55; }
   .nextrain .big { font-size: 16px; font-weight: 700; }
-  table.mini { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.mini { width: 100%; border-collapse: collapse; font-size: 15px; }
   table.mini th, table.mini td { padding: 4px; text-align: center; border-bottom: 1px solid #eeeef2; }
   table.mini th { color: #6b7280; font-weight: 600; }
   .week-row { display: flex; align-items: center; gap: 8px; padding: 6px 2px; border-bottom: 1px solid #eeeef2; font-size: 14px; }
@@ -992,7 +992,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       return;
     }
     $('hourlyTitle').textContent = `🕐 1時間毎の予報（${dayName}）`;
-    let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温℃</th><th>体感℃</th><th>風速m/s</th><th>降水ミリ</th></tr>';
+    let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温</th><th>体感</th><th>風速m/s</th><th>降水ミリ</th></tr>';
     rows.forEach(r => {
       const fl = r.temp != null ? feelsLike(r.temp, r.windSpd, r.wx, r.time, sunRange(e.mrf)) : null;
       html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td>${fl ?? '--'}</td><td>${r.windSpd ?? '--'}</td><td>${r.rainMm ?? '--'}</td></tr>`;
