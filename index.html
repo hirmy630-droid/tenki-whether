@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>明日の服装予報（ウェザーニュース版）</title>
+<title>天気予報（ウェザーニュース版）</title>
 <meta name="theme-color" content="#f2f2f7">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./icon-180.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="服装予報">
+<meta name="apple-mobile-web-app-title" content="天気予報">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -21,8 +21,8 @@
   }
   .wrap { max-width: 420px; margin: 0 auto; padding: 10px 14px calc(18px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 12px; }
   header { text-align: center; padding-top: 2px; }
-  header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
-  header .sub { font-size: 14px; color: #4b5563; margin-top: 4px; font-weight: 500; }
+  header h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; white-space: nowrap; }
+  header h1 .h-sub { font-size: 14px; color: #4b5563; font-weight: 500; margin-left: 6px; letter-spacing: 0.02em; }
   .card { background: #fff; border: 1px solid #e5e5ea; border-radius: 16px; padding: 12px 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
   .card h2 { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
   label.flabel { display: block; font-size: 14px; font-weight: 600; margin: 8px 0 4px; }
@@ -49,13 +49,13 @@
   }
   .btn-main:hover { filter: brightness(1.05); }
   .btn-loc {
-    width: 100%; min-height: 44px; background: #fff; border: 1px solid #d1d1d6; border-radius: 14px;
+    width: 100%; height: 46px; min-height: 46px; background: #fff; border: 1px solid #d1d1d6; border-radius: 14px;
     font-size: 15px; font-weight: 700; color: #1c1c1e; cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: 6px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04); touch-action: manipulation;
   }
   .btn-loc:active { transform: scale(0.98); }
-  .btn-loc .chev { color: #8e8e93; font-size: 12px; }
+  .btn-loc .chev { color: #8e8e93; font-size: 14px; }
   .loc-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 40vh; overflow-y: auto; }
   .loc-item {
     display: flex; align-items: center; gap: 8px; background: #f2f2f7;
@@ -63,54 +63,55 @@
   }
   .loc-item.selected { border-color: #007aff; background: #eaf3ff; }
   .loc-item .nm { font-weight: 700; font-size: 14px; }
-  .loc-item .ad { font-size: 12px; color: #6b7280; }
+  .loc-item .ad { font-size: 14px; color: #6b7280; }
   .loc-item .edit { margin-left: auto; background: none; border: none; color: #007aff; font-size: 14px; cursor: pointer; padding: 4px 6px; }
   .loc-item .del { background: none; border: none; color: #ff3b30; font-size: 16px; cursor: pointer; padding: 4px 6px; }
-  .status-line { font-size: 12px; color: #6b7280; text-align: center; min-height: 16px; }
+  .status-line { font-size: 14px; color: #6b7280; text-align: center; min-height: 16px; }
   .status-line.err { color: #ff3b30; }
-  .tabs { display: flex; background: #e9e9ee; border-radius: 12px; padding: 3px; gap: 3px; }
+  .tabs { display: flex; background: #e9e9ee; border-radius: 12px; padding: 3px; gap: 3px; height: 46px; }
   .tabs button {
-    flex: 1; border: none; background: transparent; padding: 8px 0; font-size: 15px;
+    flex: 1; border: none; background: transparent; padding: 0; font-size: 15px;
     font-weight: 600; color: #4b5563; border-radius: 9px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
   }
   .tabs button.on { background: #fff; color: #1c1c1e; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
   .tappable { cursor: pointer; border-radius: 12px; }
   .tappable:active { background: #f2f2f7; }
-  .tap-hint { font-size: 11px; color: #8e8e93; text-align: right; margin-top: 2px; }
+  .tap-hint { font-size: 14px; color: #8e8e93; text-align: right; margin-top: 2px; }
   .wx-head { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 2px 4px; }
   .wx-emoji { font-size: 52px; line-height: 1; }
   .wx-text { font-size: 20px; font-weight: 700; }
-  .wx-date { font-size: 13px; color: #6b7280; margin-top: 2px; }
+  .wx-date { font-size: 14px; color: #6b7280; margin-top: 2px; }
   .wx-temps { display: flex; gap: 16px; margin-top: 2px; padding: 0 4px; }
   .wx-temps .t { font-size: 15px; }
   .wx-temps .hi { color: #ff3b30; font-weight: 700; }
   .wx-temps .lo { color: #007aff; font-weight: 700; }
   .feels-strip {
     margin-top: 8px; background: #fff7e6; border-radius: 12px; padding: 7px 10px;
-    display: flex; align-items: center; gap: 6px; font-size: 13px;
+    display: flex; align-items: center; gap: 6px; font-size: 14px;
   }
   .feels-strip .fk { font-weight: 700; color: #92400e; flex: 0 0 auto; }
   .feels-strip .fv { flex: 1; display: flex; justify-content: space-around; font-weight: 700; }
   .feels-strip .fv span b { color: #ff6a3a; }
   .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
   .cell { background: #f2f2f7; border-radius: 12px; padding: 8px 10px; text-align: center; }
-  .cell .k { font-size: 12px; color: #6b7280; font-weight: 600; }
+  .cell .k { font-size: 14px; color: #6b7280; font-weight: 600; }
   .cell .v { font-size: 17px; font-weight: 700; margin-top: 2px; }
   .cell.clickable { cursor: pointer; border: 1px solid #dbe7f7; background: #eef5ff; }
   .cell.clickable:active { transform: scale(0.97); }
-  .cell .hint { font-size: 10px; color: #8e8e93; margin-top: 2px; }
+  .cell .hint { font-size: 14px; color: #8e8e93; margin-top: 2px; }
   .band { border-top: 1px solid #e5e5ea; padding: 8px 2px; display: flex; gap: 10px; }
   .band:first-of-type { border-top: none; }
   .band .when { flex: 0 0 64px; text-align: center; }
   .band .when .w { font-weight: 700; font-size: 15px; }
-  .band .when .tmp { font-size: 13px; color: #ff6a3a; font-weight: 700; margin-top: 2px; }
+  .band .when .tmp { font-size: 14px; color: #ff6a3a; font-weight: 700; margin-top: 2px; }
   .band .outfit { flex: 1; font-size: 14px; line-height: 1.5; }
   .band .outfit .o { font-weight: 700; }
   .feels-row {
     margin-top: 8px; background: #fff7e6; border-radius: 12px; padding: 8px 10px;
     display: flex; justify-content: space-around; text-align: center;
   }
-  .feels-row .fr-k { font-size: 12px; color: #92400e; font-weight: 700; }
+  .feels-row .fr-k { font-size: 14px; color: #92400e; font-weight: 700; }
   .feels-row .fr-v { font-size: 17px; font-weight: 700; color: #ff6a3a; margin-top: 2px; }
   .om-row { display: flex; gap: 10px; padding: 8px 2px; border-bottom: 1px solid #eeeef2; align-items: baseline; }
   .om-row:last-child { border-bottom: none; }
@@ -122,7 +123,7 @@
   .advice.warn { background: #fff7e6; }
   .nextrain { font-size: 15px; line-height: 1.55; }
   .nextrain .big { font-size: 16px; font-weight: 700; }
-  table.mini { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.mini { width: 100%; border-collapse: collapse; font-size: 14px; }
   table.mini th, table.mini td { padding: 4px; text-align: center; border-bottom: 1px solid #eeeef2; }
   table.mini tr.rainy td { background: #eef5ff; font-weight: 700; }
   table.mini th { color: #6b7280; font-weight: 600; }
@@ -133,7 +134,7 @@
   .week-row .hi { color: #ff3b30; font-weight: 700; }
   .week-row .lo { color: #007aff; font-weight: 700; }
   .week-row .pop { margin-left: auto; color: #0a64c8; font-weight: 600; }
-  .note { font-size: 12px; color: #8e8e93; line-height: 1.55; }
+  .note { font-size: 14px; color: #8e8e93; line-height: 1.55; }
   .hidden { display: none !important; }
   /* ポップアップ（モーダル） */
   .overlay {
@@ -152,20 +153,23 @@
     background: #f2f2f7; border: none; width: 32px; height: 32px; border-radius: 50%;
     font-size: 15px; cursor: pointer; color: #4b5563;
   }
+  #radarFrame {
+    width: 100%; height: 62vh; height: 62dvh; border: none; border-radius: 12px;
+    background: #e8eef2; display: block;
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>明日の服装予報</h1>
-    <p class="sub">KYOWA ROOF</p>
+    <h1>天気予報 <span class="h-sub">KYOWA ROOF</span></h1>
   </header>
 
   <!-- 登録場所ボタン（タブの上） -->
   <button type="button" class="btn-loc" id="locOpenBtn">📍 <span id="locBtnLabel">場所を選択</span> <span class="chev">▼ 管理</span></button>
 
   <!-- 予報 -->
-  <section class="card">
+  <section class="card" id="wxCard">
     <div class="tabs">
       <button type="button" id="tabToday">今日</button>
       <button type="button" id="tabTomorrow" class="on">明日</button>
@@ -182,7 +186,6 @@
         <span class="t">最高 <span class="hi" id="wxHigh">--℃</span></span>
         <span class="t">最低 <span class="lo" id="wxLow">--℃</span></span>
       </div>
-      <p class="tap-hint">タップで週間・2週間予報を表示</p>
     </div>
     <div class="feels-strip">
       <span class="fk">🌡️ 体感温度（日中平均）</span>
@@ -197,6 +200,7 @@
     <div style="margin-top:12px;">
       <button type="button" class="btn btn-main" id="refreshBtn">🔄 最新の予報に更新</button>
     </div>
+    <button type="button" class="btn btn-gray" id="radarBtn">🌧️ 雨雲レーダー</button>
     <p class="status-line" id="fetchStatus" style="margin-top:8px;"></p>
   </section>
 
@@ -233,6 +237,14 @@
     <button type="button" class="btn btn-gray" id="geoBtn">📍 現在地を取得・再取得</button>
     <div class="loc-list" id="locList"></div>
     <p class="status-line" id="locStatus" style="margin-top:8px;"></p>
+  </div>
+</div>
+
+<!-- ポップアップ：雨雲レーダー -->
+<div class="overlay hidden" id="radarModal">
+  <div class="sheet">
+    <div class="sheet-head"><h3>🌧️ 雨雲レーダー</h3><button type="button" class="sheet-close" data-close="radarModal">✕</button></div>
+    <iframe id="radarFrame" title="雨雲レーダー" loading="lazy"></iframe>
   </div>
 </div>
 
@@ -691,7 +703,11 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   }
 
   function openModal(id) { $(id).classList.remove('hidden'); }
-  function closeModal(id) { $(id).classList.add('hidden'); }
+  function closeModal(id) {
+    $(id).classList.add('hidden');
+    // レーダーは閉じたら中身を破棄してメモリを空ける（次回開くときに最新を読み直す）
+    if (id === 'radarModal') $('radarFrame').src = 'about:blank';
+  }
 
   function cacheKey(loc) { return `${loc.lat},${loc.lon}`; }
   function saveCache(loc, data) {
@@ -876,6 +892,14 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     el.innerHTML = html;
   }
 
+  // 雨雲レーダー（選択中の地点の地図をポップアップ表示）
+  function openRadar() {
+    const loc = selectedLoc();
+    if (!loc) return;
+    $('radarFrame').src = `https://site.weathernews.jp/onebox/map/livecam_radar/index.html?lat=${loc.lat}&lon=${loc.lon}`;
+    openModal('radarModal');
+  }
+
   // 1時間毎ポップアップ（mode: 'all'=予報全体 / 'rain'=雨予報）
   function openHourly(mode) {
     const offset = currentDay === 'today' ? 0 : 1;
@@ -936,11 +960,12 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     $('wxMain').addEventListener('click', () => openModal('weekModal'));
     $('windCell').addEventListener('click', () => openHourly('all'));
     $('precCell').addEventListener('click', () => openHourly('rain'));
+    $('radarBtn').addEventListener('click', openRadar);
     document.querySelectorAll('[data-close]').forEach(btn => {
       btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close')));
     });
     document.querySelectorAll('.overlay').forEach(ov => {
-      ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.add('hidden'); });
+      ov.addEventListener('click', (e) => { if (e.target === ov) closeModal(ov.id); });
     });
     $('addLocBtn').addEventListener('click', addLocation);
     $('locAddr').addEventListener('keydown', (e) => { if (e.key === 'Enter') addLocation(); });
@@ -976,6 +1001,27 @@ if ('serviceWorker' in navigator) {
       .catch(() => {});
   });
 }
+</script>
+<script>
+/* スワイプで今日/明日を切り替え（左スワイプ→明日、右スワイプ→今日） */
+(function () {
+  var card = document.getElementById('wxCard');
+  var tabToday = document.getElementById('tabToday');
+  var tabTomorrow = document.getElementById('tabTomorrow');
+  if (!card || !tabToday || !tabTomorrow) return;
+  var sx = 0, sy = 0;
+  card.addEventListener('touchstart', function (e) {
+    var t = e.changedTouches[0];
+    sx = t.clientX; sy = t.clientY;
+  }, { passive: true });
+  card.addEventListener('touchend', function (e) {
+    var t = e.changedTouches[0];
+    var dx = t.clientX - sx, dy = t.clientY - sy;
+    if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      (dx < 0 ? tabTomorrow : tabToday).click();
+    }
+  }, { passive: true });
+})();
 </script>
 </body>
 </html>

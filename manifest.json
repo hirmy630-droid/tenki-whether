@@ -1,1 +1,30 @@
-{"background_color":"#f2f2f7","description":"ウェザーニュースの予報をもとに、明日の服装と傘の目安を表示します","display":"standalone","icons":[{"sizes":"192x192","src":"./icon-192.png","type":"image/png"},{"sizes":"512x512","src":"./icon-512.png","type":"image/png"},{"purpose":"maskable","sizes":"512x512","src":"./icon-512.png","type":"image/png"}],"lang":"ja","name":"明日の服装予報","orientation":"portrait","scope":"./","short_name":"服装予報","start_url":"./index.html","theme_color":"#f2f2f7"}
+{
+  "background_color": "#f2f2f7",
+  "description": "ウェザーニュースの予報をもとに、明日の服装と傘の目安を表示します",
+  "display": "standalone",
+  "icons": [
+    {
+      "sizes": "192x192",
+      "src": "./icon-192.png",
+      "type": "image/png"
+    },
+    {
+      "sizes": "512x512",
+      "src": "./icon-512.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "maskable",
+      "sizes": "512x512",
+      "src": "./icon-512.png",
+      "type": "image/png"
+    }
+  ],
+  "lang": "ja",
+  "name": "天気予報",
+  "orientation": "portrait",
+  "scope": "./",
+  "short_name": "天気予報",
+  "start_url": "./index.html",
+  "theme_color": "#f2f2f7"
+}
