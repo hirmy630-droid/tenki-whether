@@ -230,7 +230,7 @@
 
   <!-- 明日の服装 -->
   <section class="card">
-    <h2 class="of-title">👕 明日の服装</h2>
+    <h2 class="of-title" id="clothesTitle">👕 明日の服装</h2>
     <div id="clothesBands"></div>
     <div class="feels-row" id="tmrFeelsRow">
       <div><div class="fr-k">8時の体感</div><div class="fr-v" id="feel8">--℃</div></div>
@@ -896,9 +896,10 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     renderLocBtn();
   }
 
-  // 明日の服装（9時〜16時の平均体感温度で判定し、トップスとボトムスを表示）＋ 8時・14時・20時の体感温度
+  // 服装（表示中の日に連動。9時〜16時の平均体感温度で判定し、トップスとボトムスを表示）＋ 8時・14時・20時の体感温度
   function renderTomorrowClothes() {
-    const e = dayEntry(1) || dayEntry(0);
+    $('clothesTitle').textContent = currentDay === 'today' ? '👕 今日の服装' : '👕 明日の服装';
+    const e = dayEntry(currentDay === 'today' ? 0 : 1) || dayEntry(0);
     if (!e) return;
     const m = e.mrf;
     const dayDate = dateOfEntry(e);
