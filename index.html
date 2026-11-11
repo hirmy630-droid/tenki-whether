@@ -49,7 +49,7 @@
   }
   .btn-main:hover { filter: brightness(1.05); }
   .btn-loc {
-    width: 100%; height: 46px; min-height: 46px; background: #fff; border: 1px solid #d1d1d6; border-radius: 14px;
+    width: 100%; height: 40px; min-height: 40px; background: #fff; border: 1px solid #d1d1d6; border-radius: 14px;
     font-size: 15px; font-weight: 700; color: #1c1c1e; cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: 6px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04); touch-action: manipulation;
@@ -82,7 +82,7 @@
   .wx-emoji { font-size: 52px; line-height: 1; }
   .wx-text { font-size: 20px; font-weight: 700; }
   .wx-date { font-size: 14px; color: #6b7280; margin-top: 2px; }
-  .wx-temps { display: flex; gap: 16px; margin-top: 2px; padding: 0 4px; }
+  .wx-temps { display: flex; gap: 16px; margin-top: 2px; padding: 0 4px; justify-content: center; }
   .wx-temps .t { font-size: 15px; }
   .wx-temps .hi { color: #ff3b30; font-weight: 700; }
   .wx-temps .lo { color: #007aff; font-weight: 700; }
@@ -123,6 +123,7 @@
   .advice.warn { background: #fff7e6; }
   .nextrain { font-size: 15px; line-height: 1.55; }
   .nextrain .big { font-size: 16px; font-weight: 700; }
+  .version { text-align: center; font-size: 14px; color: #8e8e93; margin: 2px 0 6px; }
   table.mini { width: 100%; border-collapse: collapse; font-size: 14px; }
   table.mini th, table.mini td { padding: 4px; text-align: center; border-bottom: 1px solid #eeeef2; }
   table.mini tr.rainy td { background: #eef5ff; font-weight: 700; }
@@ -195,7 +196,7 @@
       <div class="cell"><div class="k">降水確率（午前）</div><div class="v" id="wxPopAm">--%</div></div>
       <div class="cell"><div class="k">降水確率（午後）</div><div class="v" id="wxPopPm">--%</div></div>
       <div class="cell clickable" id="precCell"><div class="k">降水量</div><div class="v" id="wxPrec">--ミリ</div></div>
-      <div class="cell clickable" id="windCell"><div class="k">風速（1日の最大）</div><div class="v" id="wxWind">-- m/s</div></div>
+      <div class="cell clickable" id="windCell"><div class="k">風速</div><div class="v" id="wxWind">-- m/s</div></div>
     </div>
     <div style="margin-top:12px;">
       <button type="button" class="btn btn-main" id="refreshBtn">🔄 最新の予報に更新</button>
@@ -209,9 +210,9 @@
     <h2>👕 明日の服装</h2>
     <div id="clothesBands"></div>
     <div class="feels-row" id="tmrFeelsRow">
-      <div><div class="fr-k">8時の体感温度</div><div class="fr-v" id="feel8">--℃</div></div>
-      <div><div class="fr-k">14時の体感温度</div><div class="fr-v" id="feel14">--℃</div></div>
-      <div><div class="fr-k">20時の体感温度</div><div class="fr-v" id="feel20">--℃</div></div>
+      <div><div class="fr-k">8時の体感</div><div class="fr-v" id="feel8">--℃</div></div>
+      <div><div class="fr-k">14時の体感</div><div class="fr-v" id="feel14">--℃</div></div>
+      <div><div class="fr-k">20時の体感</div><div class="fr-v" id="feel20">--℃</div></div>
     </div>
     <div class="advice ok" id="umbrellaAdvice">傘の目安を計算中…</div>
   </section>
@@ -221,6 +222,8 @@
     <h2>🌧️ つぎの雨予報</h2>
     <div class="nextrain" id="nextRain"><p class="note">予報を取得すると表示します。</p></div>
   </section>
+
+  <div class="version">Ver. 20261111-11</div>
 </div>
 
 <!-- ポップアップ：登録場所の選択・管理 -->
