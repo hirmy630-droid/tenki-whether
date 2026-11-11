@@ -136,6 +136,8 @@
   table.mini th, table.mini td { padding: 4px; text-align: center; border-bottom: 1px solid #eeeef2; }
   table.mini th { color: #6b7280; font-weight: 600; }
   table.mini td { font-size: 16px; }
+  table.mini td.fl { color: #ff9500; }
+  table.mini td.rn { color: #007aff; }
   .week-row { display: grid; grid-template-columns: 48px 30px 1fr 46px 54px; align-items: center; gap: 6px; padding: 6px 2px; border-bottom: 1px solid #eeeef2; font-size: 14px; }
   .week-row:last-child { border-bottom: none; }
   .week-row.week-head { color: #6b7280; font-weight: 600; }
@@ -1010,10 +1012,10 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       return;
     }
     $('hourlyTitle').textContent = `🕐 1時間毎の予報（${dayName}）`;
-    let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温</th><th>体感</th><th>風速m/s</th><th>降水ミリ</th></tr>';
+    let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温</th><th>体感</th><th>風速</th><th>降水</th></tr>';
     rows.forEach(r => {
       const fl = r.temp != null ? feelsLike(r.temp, r.windSpd, r.wx, r.time, sunRange(e.mrf)) : null;
-      html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td>${fl ?? '--'}</td><td>${r.windSpd ?? '--'}</td><td>${r.rainMm ?? '--'}</td></tr>`;
+      html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td class="fl">${fl ?? '--'}</td><td>${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td class="rn">${r.rainMm ?? '--'}</td></tr>`;
     });
     html += '</table>';
     $('hourlyBody').innerHTML = html;
