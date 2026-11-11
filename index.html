@@ -135,15 +135,19 @@
   table.mini { width: 100%; border-collapse: collapse; font-size: 15px; }
   table.mini th, table.mini td { padding: 4px; text-align: center; border-bottom: 1px solid #eeeef2; }
   table.mini th { color: #6b7280; font-weight: 600; }
-  .week-row { display: flex; align-items: center; gap: 8px; padding: 6px 2px; border-bottom: 1px solid #eeeef2; font-size: 14px; }
+  table.mini td { font-size: 16px; }
+  .week-row { display: grid; grid-template-columns: 74px 32px 1fr 50px 58px; align-items: center; gap: 6px; padding: 6px 2px; border-bottom: 1px solid #eeeef2; font-size: 14px; }
   .week-row:last-child { border-bottom: none; }
-  .week-row .d { flex: 0 0 74px; font-weight: 600; }
-  .week-row .e { font-size: 20px; flex: 0 0 30px; text-align: center; }
+  .week-row.week-head { color: #6b7280; font-weight: 600; }
+  .week-row.week-head span { text-align: center; }
+  .week-row.week-head .d { text-align: left; }
+  .week-row .d { font-weight: 600; }
+  .week-row .e { font-size: 20px; text-align: center; }
+  .week-row .t { text-align: center; }
   .week-row .hi { color: #ff3b30; font-weight: 700; }
   .week-row .lo { color: #007aff; font-weight: 700; }
-  .week-row .pop { margin-left: auto; color: #0a64c8; font-weight: 600; }
-  .week-row .cred { flex: 0 0 auto; border: 1px solid #c7c7cc; background: #f2f2f7; border-radius: 999px; padding: 0 8px; font-weight: 700; color: #374151; }
-  .wk-note { font-size: 14px; color: #6b7280; margin-top: 8px; }
+  .week-row .w { text-align: center; }
+  .week-row .pop { color: #0a64c8; font-weight: 600; text-align: center; }
   .note { font-size: 14px; color: #8e8e93; line-height: 1.55; }
   .hidden { display: none !important; }
   /* ポップアップ（モーダル） */
@@ -221,8 +225,8 @@
     </div>
     <div class="btn-row3">
       <button type="button" class="btn-sub3" id="radarBtn">レーダー</button>
-      <button type="button" class="btn-sub3" id="weeklyBtn">週間予報</button>
       <button type="button" class="btn-sub3" id="hourlyBtn">1時間予報</button>
+      <button type="button" class="btn-sub3" id="weeklyBtn">週間予報</button>
     </div>
     <div style="margin-top:12px;">
       <button type="button" class="btn btn-main" id="refreshBtn">🔄 最新の予報に更新</button>
@@ -501,7 +505,6 @@ function parseWeek(html) {
     const high = seg.match(/<li class="high">\s*<p>(-?\d+)/);
     const low = seg.match(/<li class="low">\s*<p>(-?\d+)/);
     const rain = seg.match(/<li class="rain">\s*<p>(\d+)<span>(%|ミリ)<\/span>/);
-    const cred = seg.match(/<p class="credibility">([A-E])<\/p>/);
     if (!day) continue;
     out.push({
       day: Number(day[1]), dow: dow ? dow[1] : '',
@@ -509,8 +512,7 @@ function parseWeek(html) {
       high: high ? Number(high[1]) : null,
       low: low ? Number(low[1]) : null,
       rainVal: rain ? Number(rain[1]) : null,
-      rainUnit: rain ? rain[2] : null,
-      credibility: cred ? cred[1] : null
+      rainUnit: rain ? rain[2] : null
     });
   }
   return out;
@@ -964,18 +966,23 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     }
     const jn = jstNow();
     const today = jn.getUTCDate();
-    let html = '';
+    // 風速は週間予報に無いため、1時間予報から日ごとの最大風速を集計（取れる日のみ）
+    const windByDay = {};
+    (lastData.hourly || []).forEach(r => {
+      if (r.windSpd == null || !r.date) return;
+      const dnum = r.date.getDate();
+      if (windByDay[dnum] == null || r.windSpd > windByDay[dnum]) windByDay[dnum] = r.windSpd;
+    });
+    let html = '<div class="week-row week-head"><span class="d">日付</span><span>天気</span><span>最高/最低</span><span>風速</span><span>降水</span></div>';
     lastData.week.slice(0, 14).forEach((w, i) => {
       const base = new Date(Date.UTC(jn.getUTCFullYear(), jn.getUTCMonth(), today + i));
       const label = `${base.getUTCMonth() + 1}/${base.getUTCDate()}（${'日月火水木金土'[base.getUTCDay()]}）`;
-      const pop = w.rainUnit === '%' ? `降水確率 ${w.rainVal}%` : (w.rainVal ? `降水 ${w.rainVal}ミリ` : '');
+      const wind = windByDay[w.day] != null ? `${windByDay[w.day]}m/s` : '—';
+      const pop = w.rainUnit === '%' ? `${w.rainVal}%` : (w.rainVal != null ? `${w.rainVal}ミリ` : '—');
       html += `<div class="week-row"><span class="d">${label}</span><span class="e">${wxEmoji(w.wx)}</span>` +
-        `<span class="hi">${w.high ?? '--'}℃</span><span>/</span><span class="lo">${w.low ?? '--'}℃</span>` +
-        `<span class="pop">${pop}</span>${w.credibility ? `<span class="cred">${w.credibility}</span>` : ''}</div>`;
+        `<span class="t"><span class="hi">${w.high ?? '--'}℃</span>/<span class="lo">${w.low ?? '--'}℃</span></span>` +
+        `<span class="w">${wind}</span><span class="pop">${pop}</span></div>`;
     });
-    if (lastData.week.slice(0, 14).some(w => w.credibility)) {
-      html += '<p class="wk-note">右端の文字は信頼度（A〜E）です。降水の有無の予報に対する信頼度で、Aが最も高く、予報が変わりにくいことを表します。</p>';
-    }
     el.innerHTML = html;
   }
 
