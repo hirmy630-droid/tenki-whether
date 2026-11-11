@@ -980,7 +980,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       const wind = windByDay[w.day] != null ? `${windByDay[w.day]}m/s` : '—';
       const pop = w.rainUnit === '%' ? `${w.rainVal}%` : (w.rainVal != null ? `${w.rainVal}ミリ` : '—');
       html += `<div class="week-row"><span class="d">${label}</span><span class="e">${wxEmoji(w.wx)}</span>` +
-        `<span class="t"><span class="hi">${w.high ?? '--'}℃</span>/<span class="lo">${w.low ?? '--'}℃</span></span>` +
+        `<span class="t"><span class="hi">${w.high ?? '--'}℃</span>／<span class="lo">${w.low ?? '--'}℃</span></span>` +
         `<span class="w">${wind}</span><span class="pop">${pop}</span></div>`;
     });
     el.innerHTML = html;
