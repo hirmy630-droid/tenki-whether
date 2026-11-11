@@ -196,8 +196,8 @@
     <div class="grid2">
       <div class="cell"><div class="k">降水確率（午前）</div><div class="v" id="wxPopAm">--%</div></div>
       <div class="cell"><div class="k">降水確率（午後）</div><div class="v" id="wxPopPm">--%</div></div>
-      <div class="cell clickable" id="precCell"><div class="k">降水量</div><div class="v" id="wxPrec">--ミリ</div></div>
-      <div class="cell clickable" id="windCell"><div class="k">風速</div><div class="v" id="wxWind">-- m/s</div></div>
+      <div class="cell" id="precCell"><div class="k">降水量</div><div class="v" id="wxPrec">--ミリ</div></div>
+      <div class="cell" id="windCell"><div class="k">風速</div><div class="v" id="wxWind">-- m/s</div></div>
     </div>
     <div style="margin-top:12px;">
       <button type="button" class="btn btn-main" id="refreshBtn">🔄 最新の予報に更新</button>
@@ -966,8 +966,6 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     $('locOpenBtn').addEventListener('click', () => openModal('locModal'));
     $('weeklyBtn').addEventListener('click', () => openModal('weekModal'));
     $('hourlyBtn').addEventListener('click', () => openHourly('all'));
-    $('windCell').addEventListener('click', () => openHourly('all'));
-    $('precCell').addEventListener('click', () => openHourly('rain'));
     $('radarBtn').addEventListener('click', openRadar);
     document.querySelectorAll('[data-close]').forEach(btn => {
       btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close')));
