@@ -142,6 +142,8 @@
   .week-row .hi { color: #ff3b30; font-weight: 700; }
   .week-row .lo { color: #007aff; font-weight: 700; }
   .week-row .pop { margin-left: auto; color: #0a64c8; font-weight: 600; }
+  .week-row .cred { flex: 0 0 auto; border: 1px solid #c7c7cc; background: #f2f2f7; border-radius: 999px; padding: 0 8px; font-weight: 700; color: #374151; }
+  .wk-note { font-size: 14px; color: #6b7280; margin-top: 8px; }
   .note { font-size: 14px; color: #8e8e93; line-height: 1.55; }
   .hidden { display: none !important; }
   /* ポップアップ（モーダル） */
@@ -218,8 +220,8 @@
       <div class="cell" id="windCell"><div class="k">風速</div><div class="v" id="wxWind">-- m/s</div></div>
     </div>
     <div class="btn-row3">
-      <button type="button" class="btn-sub3" id="weeklyBtn">週間予報</button>
       <button type="button" class="btn-sub3" id="radarBtn">レーダー</button>
+      <button type="button" class="btn-sub3" id="weeklyBtn">週間予報</button>
       <button type="button" class="btn-sub3" id="hourlyBtn">1時間予報</button>
     </div>
     <div style="margin-top:12px;">
@@ -499,6 +501,7 @@ function parseWeek(html) {
     const high = seg.match(/<li class="high">\s*<p>(-?\d+)/);
     const low = seg.match(/<li class="low">\s*<p>(-?\d+)/);
     const rain = seg.match(/<li class="rain">\s*<p>(\d+)<span>(%|ミリ)<\/span>/);
+    const cred = seg.match(/<p class="credibility">([A-E])<\/p>/);
     if (!day) continue;
     out.push({
       day: Number(day[1]), dow: dow ? dow[1] : '',
@@ -506,7 +509,8 @@ function parseWeek(html) {
       high: high ? Number(high[1]) : null,
       low: low ? Number(low[1]) : null,
       rainVal: rain ? Number(rain[1]) : null,
-      rainUnit: rain ? rain[2] : null
+      rainUnit: rain ? rain[2] : null,
+      credibility: cred ? cred[1] : null
     });
   }
   return out;
@@ -967,8 +971,11 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       const pop = w.rainUnit === '%' ? `降水確率 ${w.rainVal}%` : (w.rainVal ? `降水 ${w.rainVal}ミリ` : '');
       html += `<div class="week-row"><span class="d">${label}</span><span class="e">${wxEmoji(w.wx)}</span>` +
         `<span class="hi">${w.high ?? '--'}℃</span><span>/</span><span class="lo">${w.low ?? '--'}℃</span>` +
-        `<span class="pop">${pop}</span></div>`;
+        `<span class="pop">${pop}</span>${w.credibility ? `<span class="cred">${w.credibility}</span>` : ''}</div>`;
     });
+    if (lastData.week.slice(0, 14).some(w => w.credibility)) {
+      html += '<p class="wk-note">右端の文字は信頼度（A〜E）です。降水の有無の予報に対する信頼度で、Aが最も高く、予報が変わりにくいことを表します。</p>';
+    }
     el.innerHTML = html;
   }
 
