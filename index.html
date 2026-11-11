@@ -190,8 +190,8 @@
       </div>
     </div>
     <div class="tabs">
-      <button type="button" id="tabToday">今日</button>
-      <button type="button" id="tabTomorrow" class="on">明日</button>
+      <button type="button" id="tabToday" class="on">今日</button>
+      <button type="button" id="tabTomorrow">明日</button>
     </div>
     <div class="wx-date" id="wxDate"></div>
     <div id="wxMain">
@@ -626,7 +626,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   const LS_CACHE = 'wn_clothes_cache_v2';
   let locations = [];
   let selectedId = null;
-  let currentDay = 'tomorrow'; // 'today' | 'tomorrow'
+  let currentDay = 'today'; // 'today' | 'tomorrow'
   let lastData = null; // { mrf, cards, hourly, week, placeName, fetchedAt }
 
   const $ = (id) => document.getElementById(id);
