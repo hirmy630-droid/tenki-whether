@@ -1012,15 +1012,12 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       return;
     }
     $('hourlyTitle').textContent = `🕐 1時間毎の予報（${dayName}）`;
-    const popAm = e.card && e.card.popAm != null ? e.card.popAm : e.mrf.POP;
-    const popPm = e.card && e.card.popPm != null ? e.card.popPm : e.mrf.POP;
-    let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温</th><th>体感</th><th>風速</th><th>降水確率</th></tr>';
+    let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温</th><th>体感</th><th>風速</th><th>降水</th></tr>';
     rows.forEach(r => {
       const fl = r.temp != null ? feelsLike(r.temp, r.windSpd, r.wx, r.time, sunRange(e.mrf)) : null;
-      const pop = r.time < 12 ? popAm : popPm;
-      html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td class="fl">${fl ?? '--'}</td><td>${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td class="rn">${pop != null ? `${pop}%` : '--'}</td></tr>`;
+      html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td class="fl">${fl ?? '--'}</td><td>${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td class="rn">${r.rainMm ?? '--'}</td></tr>`;
     });
-    html += '</table><p class="note">降水確率は午前（0〜12時）・午後（12〜24時）の値です。ウェザーニュースに1時間ごとの降水確率は無いため、その時間帯が属する午前／午後の確率を表示しています。</p>';
+    html += '</table>';
     $('hourlyBody').innerHTML = html;
     openModal('hourlyModal');
   }
