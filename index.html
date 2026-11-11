@@ -625,6 +625,7 @@ function daytimeWindAvg(hourly, dateObj) {
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   const LS_LOC = 'wn_clothes_locations_v1';
   const LS_CACHE = 'wn_clothes_cache_v2';
+  const LS_SEL = 'wn_clothes_selected_v1';
   let locations = [];
   let selectedId = null;
   let currentDay = 'today'; // 'today' | 'tomorrow'
@@ -638,9 +639,10 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       locations = [{ id: 'default-chuo', name: '東京都中央区（サンプル）', addr: '東京都中央区', lat: 35.6706, lon: 139.7720 }];
       saveLocations();
     }
+    if (!selectedId) { try { selectedId = localStorage.getItem(LS_SEL) || null; } catch (e) {} }
     if (!selectedId || !locations.some(l => l.id === selectedId)) selectedId = locations[0].id;
   }
-  function saveLocations() { try { localStorage.setItem(LS_LOC, JSON.stringify(locations)); } catch (e) {} }
+  function saveLocations() { try { localStorage.setItem(LS_LOC, JSON.stringify(locations)); localStorage.setItem(LS_SEL, selectedId || ''); } catch (e) {} }
   function selectedLoc() { return locations.find(l => l.id === selectedId) || locations[0]; }
 
   function renderLocations() {
@@ -675,7 +677,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       });
       div.appendChild(del);
       div.addEventListener('click', () => {
-        selectedId = loc.id; renderLocations(); renderLocBtn();
+        selectedId = loc.id; saveLocations(); renderLocations(); renderLocBtn();
         closeModal('locModal');
         refresh(false);
       });
