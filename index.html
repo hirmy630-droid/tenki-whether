@@ -123,7 +123,6 @@
   .advice.warn { background: #fff7e6; }
   .nextrain { font-size: 15px; line-height: 1.55; }
   .nextrain .big { font-size: 16px; font-weight: 700; }
-  .version { text-align: center; font-size: 14px; color: #8e8e93; margin: 2px 0 6px; }
   table.mini { width: 100%; border-collapse: collapse; font-size: 14px; }
   table.mini th, table.mini td { padding: 4px; text-align: center; border-bottom: 1px solid #eeeef2; }
   table.mini tr.rainy td { background: #eef5ff; font-weight: 700; }
@@ -223,7 +222,6 @@
     <div class="nextrain" id="nextRain"><p class="note">予報を取得すると表示します。</p></div>
   </section>
 
-  <div class="version">Ver. 20261111-11</div>
 </div>
 
 <!-- ポップアップ：登録場所の選択・管理 -->
@@ -1006,7 +1004,7 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <script>
-/* スワイプで今日/明日を切り替え（左スワイプ→明日、右スワイプ→今日） */
+/* スワイプで今日/明日を切り替え（左スワイプ→今日、右スワイプ→明日）※v12で逆転 */
 (function () {
   var card = document.getElementById('wxCard');
   var tabToday = document.getElementById('tabToday');
@@ -1021,7 +1019,7 @@ if ('serviceWorker' in navigator) {
     var t = e.changedTouches[0];
     var dx = t.clientX - sx, dy = t.clientY - sy;
     if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      (dx < 0 ? tabTomorrow : tabToday).click();
+      (dx < 0 ? tabToday : tabTomorrow).click();
     }
   }, { passive: true });
 })();
