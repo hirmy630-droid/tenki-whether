@@ -94,7 +94,7 @@
   .wx-temps .hi { color: #ff3b30; font-weight: 700; }
   .wx-temps .lo { color: #007aff; font-weight: 700; }
   .feels-strip {
-    margin-top: 10px; background: #fff7e6; border-radius: 12px; padding: 4px 10px;
+    margin-top: 12px; background: #fff7e6; border-radius: 12px; padding: 4px 10px;
     display: flex; align-items: center; gap: 6px; font-size: 18px;
   }
   .now-strip {
@@ -154,8 +154,8 @@
   .week-row.week-head span { text-align: center; }
   .week-row.week-head .d { text-align: left; }
   .week-row .d { font-weight: 600; display: flex; flex-direction: column; line-height: 1.3; }
-  .week-row .d.sat { color: #007aff; }
-  .week-row .d.sun { color: #ff3b30; }
+  .week-row .dow.sat { color: #007aff; }
+  .week-row .dow.sun { color: #ff3b30; }
   .week-row .e { font-size: 20px; text-align: center; }
   .week-row .t { display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1.3; }
   .week-row.week-head span { white-space: nowrap; }
@@ -1119,7 +1119,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     let html = '<div class="week-row week-head"><span class="d">日付</span><span>天気</span><span class="th-t"><span>最高</span><span>最低</span></span><span>風速</span><span>降水</span></div>';
     lastData.week.slice(0, 14).forEach((w, i) => {
       const base = new Date(Date.UTC(jn.getUTCFullYear(), jn.getUTCMonth(), today + i));
-      const label = `<span>${base.getUTCMonth() + 1}/${base.getUTCDate()}</span><span>（${'日月火水木金土'[base.getUTCDay()]}）</span>`;
+      const dowCls = base.getUTCDay() === 6 ? 'sat' : base.getUTCDay() === 0 ? 'sun' : '';
+      const label = `<span>${base.getUTCMonth() + 1}/${base.getUTCDate()}</span><span class="dow ${dowCls}">（${'日月火水木金土'[base.getUTCDay()]}）</span>`;
       let wind, windCls = 'w';
       if (windByDay[w.day] != null) {
         wind = `${windByDay[w.day]}m/s`;
@@ -1129,7 +1130,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         else wind = '—';
       }
       const pop = w.rainUnit === '%' ? `${w.rainVal}%` : (w.rainVal != null ? `${w.rainVal}ミリ` : '—');
-      html += `<div class="week-row"><span class="d${base.getUTCDay() === 6 ? ' sat' : base.getUTCDay() === 0 ? ' sun' : ''}">${label}</span><span class="e">${wxEmoji(w.wx)}</span>` +
+      html += `<div class="week-row"><span class="d">${label}</span><span class="e">${wxEmoji(w.wx)}</span>` +
         `<span class="t"><span class="hi">${w.high ?? '--'}℃</span><span class="lo">${w.low ?? '--'}℃</span></span>` +
         `<span class="${windCls}">${wind}</span><span class="pop">${pop}</span></div>`;
     });
