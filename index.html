@@ -80,8 +80,8 @@
   .tabs button.on { background: #fff; color: #1c1c1e; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
   .wx-head { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 8px; padding: 2px 4px; }
   .wx-emoji { font-size: 52px; line-height: 1; }
-  .wx-text { font-size: 20px; font-weight: 700; }
-  .wx-date { font-size: 17px; line-height: 24px; color: #4b5563; margin-top: 8px; text-align: center; }
+  .wx-text { font-size: 21px; font-weight: 700; }
+  .wx-date { font-size: 18px; line-height: 25px; color: #4b5563; margin-top: 8px; text-align: center; }
   #ptrBar {
     position: fixed; top: 0; left: 0; right: 0; height: 38px; z-index: 60;
     display: flex; align-items: center; justify-content: center;
@@ -90,7 +90,7 @@
     transform: translateY(-100%); pointer-events: none;
   }
   .wx-temps { display: flex; gap: 16px; margin-top: 2px; padding: 0 4px; justify-content: center; }
-  .wx-temps .t { font-size: 17px; line-height: 22px; }
+  .wx-temps .t { font-size: 18px; line-height: 23px; }
   .wx-temps .hi { color: #ff3b30; font-weight: 700; }
   .wx-temps .lo { color: #007aff; font-weight: 700; }
   .feels-strip {
@@ -139,11 +139,13 @@
   #rainModal table.mini th, #windModal table.mini th { font-size: 17px; }
   #rainModal table.mini td, #windModal table.mini td { font-size: 18px; }
   #rainModal table.mini td.rn { font-size: 18px; }
+  #hourlyModal table.mini th { font-size: 17px; }
+  #hourlyModal table.mini td { font-size: 18px; }
   /* 降水確率の数字と％は字面が小さく見えるため、この列だけ見た目をそろえる目的で20pxにする */
   #rainModal table.mini td:last-child { font-size: 20px; }
   table.mini td.fl { color: #ff9500; }
   table.mini td.rn { color: #007aff; }
-  .week-row { display: grid; grid-template-columns: 48px 30px 1fr 46px 54px; align-items: center; gap: 6px; padding: 6px 2px; border-bottom: 1px solid #eeeef2; font-size: 14px; }
+  .week-row { display: grid; grid-template-columns: 52px 32px 1fr 52px 58px; align-items: center; gap: 6px; padding: 6px 2px; border-bottom: 1px solid #eeeef2; font-size: 16px; }
   .week-row:last-child { border-bottom: none; }
   .week-row.week-head { color: #6b7280; font-weight: 600; }
   .week-row.week-head span { text-align: center; }
