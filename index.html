@@ -149,6 +149,7 @@
   .week-row .hi { color: #ff3b30; font-weight: 700; }
   .week-row .lo { color: #007aff; font-weight: 700; }
   .week-row .w { text-align: center; }
+  .week-row .w.om { color: #8e8e93; }
   .week-row .pop { color: #0a64c8; font-weight: 600; text-align: center; }
   .note { font-size: 14px; color: #8e8e93; line-height: 1.55; }
   .hidden { display: none !important; }
@@ -201,6 +202,7 @@
     <div class="tabs">
       <button type="button" id="tabToday" class="on">今日</button>
       <button type="button" id="tabTomorrow">明日</button>
+      <button type="button" id="tabDayAfter">明後日</button>
     </div>
     <div class="wx-date" id="wxDate"></div>
     <div id="wxMain">
@@ -289,6 +291,22 @@
   </div>
 </div>
 
+<!-- ポップアップ：降水の詳細 -->
+<div class="overlay hidden" id="rainModal">
+  <div class="sheet">
+    <div class="sheet-head"><h3 id="rainTitle">💧 降水の詳細</h3><button type="button" class="sheet-close" data-close="rainModal">✕</button></div>
+    <div id="rainBody"><p class="note">読み込み中…</p></div>
+  </div>
+</div>
+
+<!-- ポップアップ：風の詳細 -->
+<div class="overlay hidden" id="windModal">
+  <div class="sheet">
+    <div class="sheet-head"><h3 id="windTitle">🍃 風の詳細</h3><button type="button" class="sheet-close" data-close="windModal">✕</button></div>
+    <div id="windBody"><p class="note">読み込み中…</p></div>
+  </div>
+</div>
+
 <!-- ポップアップ：週間・2週間予報 -->
 <div class="overlay hidden" id="weekModal">
   <div class="sheet">
@@ -305,12 +323,58 @@
    - 日別予報JSON: https://site.weathernews.jp/lba/wxdata/api_data_ss1/mrf?lat=&lon=
    - 地点ページHTML: https://weathernews.jp/onebox/{lat}/{lon}/temp=c&lang=ja
      （今日/明日の天気・午前午後降水確率、1時間予報、週間予報を解析）
+   - 1時間ごとの降水確率と、週間予報の日別最大風速の補完のみ Open-Meteo（無料）:
+     https://api.open-meteo.com/v1/forecast
+     （ウェザーニュースに1時間ごとの降水確率がなく、週間予報に風速がないため。
+       JMAモデルには確率が含まれないので、標準のブレンドデータを使用）
    地点の緯度経度変換：国土地理院 住所検索API（無料）
    体感温度：1時間予報の気温と風速から計算した目安
    ========================================================= */
 
 const WN_MRF_URL = (lat, lon) => `https://site.weathernews.jp/lba/wxdata/api_data_ss1/mrf?lat=${lat}&lon=${lon}`;
 const WN_PAGE_URL = (lat, lon) => `https://weathernews.jp/onebox/${lat}/${lon}/temp=c&lang=ja`;
+const OM_URL = (lat, lon) => `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation_probability&daily=wind_speed_10m_max&wind_speed_unit=ms&timezone=Asia%2FTokyo&forecast_days=16`;
+
+// 風向アイコン wind_{速度区分}_{風向コード}.png の風向コード（01〜16）→ 16方位ラベル
+// （矢印は風の進む先を指す。コード16＝北の風、時計回りに22.5度ずつ。00は静穏）
+const WIND_DIRS = ['北', '北北東', '北東', '東北東', '東', '東南東', '南東', '南南東', '南', '南南西', '南西', '西南西', '西', '西北西', '北西', '北北西'];
+function windDirLabel(code) {
+  return code >= 1 && code <= 16 ? WIND_DIRS[code % 16] : null;
+}
+
+// Open-Meteo: 1時間ごとの降水確率を {"2026-11-12T09": 60} のマップにする
+function parseOmPop(json) {
+  const out = {};
+  try {
+    const times = (json && json.hourly && json.hourly.time) || [];
+    const pops = (json && json.hourly && json.hourly.precipitation_probability) || [];
+    for (let i = 0; i < times.length; i++) {
+      const v = pops[i];
+      if (typeof v === 'number' && Number.isFinite(v)) out[String(times[i]).slice(0, 13)] = Math.round(v);
+    }
+  } catch (e) { /* 取れなければ空マップ（表示は「―」になる） */ }
+  return out;
+}
+
+// Open-Meteo: 日別の最大風速（m/s）を {"2026-11-16": 3.8} のマップにする
+function parseOmWind(json) {
+  const out = {};
+  try {
+    const times = (json && json.daily && json.daily.time) || [];
+    const winds = (json && json.daily && json.daily.wind_speed_10m_max) || [];
+    for (let i = 0; i < times.length; i++) {
+      const v = winds[i];
+      if (typeof v === 'number' && Number.isFinite(v)) out[String(times[i]).slice(0, 10)] = v;
+    }
+  } catch (e) { /* 取れなければ空マップ（補完なし） */ }
+  return out;
+}
+
+// 1時間予報の行（ローカル日付＋時刻）→ Open-Meteo のキー
+function omKey(dateObj, hour) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${dateObj.getFullYear()}-${p(dateObj.getMonth() + 1)}-${p(dateObj.getDate())}T${p(hour)}`;
+}
 const GSI_SEARCH_URL = (q) => `https://msearch.gsi.go.jp/address-search/AddressSearch?q=${encodeURIComponent(q)}`;
 
 /* ---------- 天気コード → テキスト・絵文字 ---------- */
@@ -468,13 +532,14 @@ function parseHourly(html, nowDate) {
       const wx = u.match(/wxicon\/(\d+)\.png/);
       const rain = u.match(/<li class="rain">\s*<p>([\d.]+|-)<span>ミリ<\/span><\/p>/);
       const temp = u.match(/<li class="temp">\s*<p>(-?[\d.]+)<span>℃<\/span><\/p>/);
-      const wind = u.match(/wind_\d+_\d+\.png[\s\S]*?<p>(\d+)<span>m\/s<\/span><\/p>/);
+      const wind = u.match(/wind_\d+_(\d+)\.png[\s\S]*?<p>(\d+)<span>m\/s<\/span><\/p>/);
       rows.push({
         time: Number(time[1]),
         wx: wx ? Number(wx[1]) : null,
         rainMm: rain ? numOrNull(rain[1]) : null,
         temp: temp ? numOrNull(temp[1]) : null,
-        windSpd: wind ? Number(wind[1]) : null,
+        windSpd: wind ? Number(wind[2]) : null,
+        windDir: wind ? Number(wind[1]) : null,
         past: !!um[1]
       });
     }
@@ -636,7 +701,9 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   const LS_SEL = 'wn_clothes_selected_v1';
   let locations = [];
   let selectedId = null;
-  let currentDay = 'today'; // 'today' | 'tomorrow'
+  let currentDay = 'today'; // 'today' | 'tomorrow' | 'dayafter'
+  const DAY_OFFSET = { today: 0, tomorrow: 1, dayafter: 2 };
+  const DAY_LABEL = { today: '今日', tomorrow: '明日', dayafter: '明後日' };
   let lastData = null; // { mrf, cards, hourly, week, placeName, fetchedAt }
 
   const $ = (id) => document.getElementById(id);
@@ -805,9 +872,10 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     if (useCacheFirst && cached) { lastData = cached; render(); }
     setStatus('予報を取得中…');
     try {
-      const [mrfRes, pageRes] = await Promise.all([
+      const [mrfRes, pageRes, omRes] = await Promise.all([
         fetch(WN_MRF_URL(loc.lat, loc.lon)).then(r => { if (!r.ok) throw new Error('mrf'); return r.json(); }),
-        fetch(WN_PAGE_URL(loc.lat, loc.lon)).then(r => { if (!r.ok) throw new Error('page'); return r.text(); })
+        fetch(WN_PAGE_URL(loc.lat, loc.lon)).then(r => { if (!r.ok) throw new Error('page'); return r.text(); }),
+        fetch(OM_URL(loc.lat, loc.lon)).then(r => { if (!r.ok) throw new Error('om'); return r.json(); }).catch(() => null)
       ]);
       const data = {
         mrf: mrfRes.mrf || [],
@@ -815,6 +883,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         hourly: parseHourly(pageRes, new Date()),
         week: parseWeek(pageRes),
         placeName: parsePlaceName(pageRes),
+        popMap: parseOmPop(omRes),
+        omWind: parseOmWind(omRes),
         fetchedAt: Date.now()
       };
       lastData = data;
@@ -832,12 +902,51 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     }
   }
 
-  function dayEntry(offset) { // offset: 0=today, 1=tomorrow (MRF配列の並び）
+  function dayEntry(offset) { // offset: 0=today, 1=tomorrow (MRF配列の並び), 2=dayafter（合成）
+    if (offset === 2) return dayAfterEntry();
     if (!lastData || !lastData.mrf || !lastData.mrf.length) return null;
     const idx = Math.min(offset, lastData.mrf.length - 1);
     const m = lastData.mrf[idx];
     const card = lastData.cards ? lastData.cards[offset === 0 ? 'today' : 'tomorrow'] : null;
     return { mrf: m, card };
+  }
+
+  // Open-Meteo の1時間ごとの降水確率から、午前（0-11時）/午後（12-23時）の最大値を返す
+  function omHalfPop(dayDate, half) {
+    const popMap = (lastData && lastData.popMap) || {};
+    const start = half === 0 ? 0 : 12;
+    let max = null;
+    for (let h = start; h < start + 12; h++) {
+      const v = popMap[omKey(dayDate, h)];
+      if (v != null && (max == null || v > max)) max = v;
+    }
+    return max;
+  }
+
+  // 明後日のエントリを合成する（MRFは今日・明日だけなので、週間予報＋1時間予報＋Open-Meteoで代替）
+  // 天気・最高/最低・日単位の降水確率：週間予報 / 降水量：1時間予報の合計 /
+  // 午前・午後の降水確率：Open-Meteoの1時間確率の最大値 / 日の出・日の入り：明日の値を流用
+  function dayAfterEntry() {
+    if (!lastData || !lastData.week || lastData.week.length < 3) return null;
+    const w = lastData.week[2];
+    const jn = jstNow();
+    const y = jn.getUTCFullYear(), mo = jn.getUTCMonth(), dnum = jn.getUTCDate() + 2;
+    const tm = Date.UTC(y, mo, dnum) / 1000 - 9 * 3600; // JST当日0時のエポック秒
+    const dayDate = new Date(y, mo, dnum);
+    let prec = 0, hasRain = false;
+    (lastData.hourly || []).forEach(r => {
+      if (r.date && sameDay(r.date, dayDate) && r.rainMm != null) { prec += r.rainMm; hasRain = true; }
+    });
+    const m1 = (lastData.mrf && lastData.mrf[1]) || {};
+    const mrf = {
+      tm, WX: w.wx, MAXT: w.high, MINT: w.low,
+      POP: w.rainUnit === '%' ? w.rainVal : null,
+      PREC: hasRain ? Math.round(prec * 10) / 10 : 0,
+      sunrise: m1.sunrise != null ? m1.sunrise : null,
+      sunset: m1.sunset != null ? m1.sunset : null
+    };
+    const card = { wx: w.wx, text: null, popAm: omHalfPop(dayDate, 0), popPm: omHalfPop(dayDate, 1) };
+    return { mrf, card };
   }
 
   // 指定日の指定時刻の1時間予報行を返す
@@ -873,7 +982,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 
   function render() {
     if (!lastData) return;
-    const offset = currentDay === 'today' ? 0 : 1;
+    const offset = DAY_OFFSET[currentDay] ?? 0;
     const e = dayEntry(offset);
     if (!e) return;
     const m = e.mrf, card = e.card;
@@ -882,7 +991,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const code = card && card.wx ? card.wx : m.WX;
     $('wxEmoji').textContent = wxEmoji(code);
     $('wxText').textContent = (card && card.text) ? card.text : wxText(code);
-    $('wxDate').textContent = `${d.mo}月${d.d}日（${d.dow}）${currentDay === 'today' ? '・今日' : '・明日'}`;
+    $('wxDate').textContent = `${d.mo}月${d.d}日（${d.dow}）・${DAY_LABEL[currentDay]}`;
     $('wxHigh').textContent = `${m.MAXT}℃`;
     $('wxLow').textContent = `${m.MINT}℃`;
 
@@ -895,8 +1004,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 
     const popAm = card ? card.popAm : null;
     const popPm = card ? card.popPm : null;
-    $('wxPopAm').textContent = popAm === null || popAm === undefined ? `${m.POP}%` : `${popAm}%`;
-    $('wxPopPm').textContent = popPm === null || popPm === undefined ? `${m.POP}%` : `${popPm}%`;
+    $('wxPopAm').textContent = popAm === null || popAm === undefined ? `${m.POP ?? '--'}%` : `${popAm}%`;
+    $('wxPopPm').textContent = popPm === null || popPm === undefined ? `${m.POP ?? '--'}%` : `${popPm}%`;
     $('wxPrec').textContent = `${m.PREC}ミリ`;
 
     renderNow();
@@ -908,8 +1017,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 
   // 服装（表示中の日に連動。9時〜16時の平均体感温度で判定し、トップスとボトムスを表示）＋ 8時・14時・20時の体感温度
   function renderTomorrowClothes() {
-    $('clothesTitle').textContent = currentDay === 'today' ? '👕 今日の服装' : '👕 明日の服装';
-    const e = dayEntry(currentDay === 'today' ? 0 : 1) || dayEntry(0);
+    $('clothesTitle').textContent = `👕 ${DAY_LABEL[currentDay]}の服装`;
+    const e = dayEntry(DAY_OFFSET[currentDay] ?? 0) || dayEntry(0);
     if (!e) return;
     const m = e.mrf;
     const dayDate = dateOfEntry(e);
@@ -975,15 +1084,24 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       const dnum = r.date.getDate();
       if (windByDay[dnum] == null || r.windSpd > windByDay[dnum]) windByDay[dnum] = r.windSpd;
     });
+    // 1時間予報から集計できない日は、Open-Meteo の日別最大風速で補う（グレー表示）
+    const omWind = lastData.omWind || {};
     let html = '<div class="week-row week-head"><span class="d">日付</span><span>天気</span><span>最高／最低</span><span>風速</span><span>降水</span></div>';
     lastData.week.slice(0, 14).forEach((w, i) => {
       const base = new Date(Date.UTC(jn.getUTCFullYear(), jn.getUTCMonth(), today + i));
       const label = `<span>${base.getUTCMonth() + 1}/${base.getUTCDate()}</span><span>（${'日月火水木金土'[base.getUTCDay()]}）</span>`;
-      const wind = windByDay[w.day] != null ? `${windByDay[w.day]}m/s` : '—';
+      let wind, windCls = 'w';
+      if (windByDay[w.day] != null) {
+        wind = `${windByDay[w.day]}m/s`;
+      } else {
+        const wkey = `${base.getUTCFullYear()}-${String(base.getUTCMonth() + 1).padStart(2, '0')}-${String(base.getUTCDate()).padStart(2, '0')}`;
+        if (omWind[wkey] != null) { wind = `${Math.round(omWind[wkey])}m/s`; windCls = 'w om'; }
+        else wind = '—';
+      }
       const pop = w.rainUnit === '%' ? `${w.rainVal}%` : (w.rainVal != null ? `${w.rainVal}ミリ` : '—');
       html += `<div class="week-row"><span class="d">${label}</span><span class="e">${wxEmoji(w.wx)}</span>` +
         `<span class="t"><span class="hi">${w.high ?? '--'}℃</span>／<span class="lo">${w.low ?? '--'}℃</span></span>` +
-        `<span class="w">${wind}</span><span class="pop">${pop}</span></div>`;
+        `<span class="${windCls}">${wind}</span><span class="pop">${pop}</span></div>`;
     });
     el.innerHTML = html;
   }
@@ -998,13 +1116,13 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 
   // 1時間毎ポップアップ
   function openHourly() {
-    const offset = currentDay === 'today' ? 0 : 1;
+    const offset = DAY_OFFSET[currentDay] ?? 0;
     const e = dayEntry(offset);
     if (!e || !lastData) return;
     const dayDate = dateOfEntry(e);
     const rows = (lastData.hourly || []).filter(r => sameDay(r.date, dayDate));
     const d = dateFromMrfTm(e.mrf.tm);
-    const dayName = `${d.mo}月${d.d}日（${d.dow}）${currentDay === 'today' ? '・今日' : '・明日'}`;
+    const dayName = `${d.mo}月${d.d}日（${d.dow}）・${DAY_LABEL[currentDay]}`;
     if (!rows.length) {
       $('hourlyTitle').textContent = '🕐 1時間毎の予報';
       $('hourlyBody').innerHTML = '<p class="note">1時間予報を取得できませんでした。</p>';
@@ -1013,19 +1131,75 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     }
     $('hourlyTitle').textContent = `🕐 1時間毎の予報（${dayName}）`;
     let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温</th><th>体感</th><th>風速</th><th>降水</th></tr>';
+    const popMap = lastData.popMap || {};
     rows.forEach(r => {
       const fl = r.temp != null ? feelsLike(r.temp, r.windSpd, r.wx, r.time, sunRange(e.mrf)) : null;
-      html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td class="fl">${fl ?? '--'}</td><td>${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td class="rn">${r.rainMm ?? '--'}</td></tr>`;
+      const pop = popMap[omKey(r.date, r.time)];
+      html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td class="fl">${fl ?? '--'}</td><td>${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td class="rn">${pop != null ? `${pop}%` : '―'}</td></tr>`;
     });
     html += '</table>';
     $('hourlyBody').innerHTML = html;
     openModal('hourlyModal');
   }
 
+  // 降水の詳細ポップアップ（降水量セルをタップ）：1日の合計・午前午後の降水確率＋時間ごとの降水量と降水確率
+  function openRainDetail() {
+    const e = dayEntry(DAY_OFFSET[currentDay] ?? 0);
+    if (!e || !lastData) return;
+    const dayDate = dateOfEntry(e);
+    const rows = (lastData.hourly || []).filter(r => sameDay(r.date, dayDate));
+    const d = dateFromMrfTm(e.mrf.tm);
+    $('rainTitle').textContent = `💧 降水の詳細（${d.mo}月${d.d}日（${d.dow}）・${DAY_LABEL[currentDay]}）`;
+    if (!rows.length) {
+      $('rainBody').innerHTML = '<p class="note">降水の詳細を取得できませんでした。</p>';
+      openModal('rainModal');
+      return;
+    }
+    const m = e.mrf, card = e.card;
+    const popAm = card && card.popAm != null ? card.popAm : m.POP;
+    const popPm = card && card.popPm != null ? card.popPm : m.POP;
+    let html = `<p class="note">1日の降水量：${m.PREC}ミリ　降水確率：午前 ${popAm != null ? popAm + '%' : '--'}／午後 ${popPm != null ? popPm + '%' : '--'}</p>`;
+    html += '<table class="mini"><tr><th>時</th><th>降水量</th><th>降水確率</th></tr>';
+    const popMap = lastData.popMap || {};
+    rows.forEach(r => {
+      const pop = popMap[omKey(r.date, r.time)];
+      html += `<tr><td>${r.time}時</td><td class="rn">${r.rainMm != null ? r.rainMm : 0}</td><td>${pop != null ? `${pop}%` : '―'}</td></tr>`;
+    });
+    html += '</table>';
+    $('rainBody').innerHTML = html;
+    openModal('rainModal');
+  }
+
+  // 風の詳細ポップアップ（風速セルをタップ）：1日の最大風速＋時間ごとの風速と風向き
+  function openWindDetail() {
+    const e = dayEntry(DAY_OFFSET[currentDay] ?? 0);
+    if (!e || !lastData) return;
+    const dayDate = dateOfEntry(e);
+    const rows = (lastData.hourly || []).filter(r => sameDay(r.date, dayDate));
+    const d = dateFromMrfTm(e.mrf.tm);
+    $('windTitle').textContent = `🍃 風の詳細（${d.mo}月${d.d}日（${d.dow}）・${DAY_LABEL[currentDay]}）`;
+    if (!rows.length) {
+      $('windBody').innerHTML = '<p class="note">風の詳細を取得できませんでした。</p>';
+      openModal('windModal');
+      return;
+    }
+    const wMax = dayWindMax(lastData.hourly, dayDate);
+    let html = `<p class="note">1日の最大風速：${wMax != null ? wMax + ' m/s' : '--'}</p>`;
+    html += '<table class="mini"><tr><th>時</th><th>風速</th><th>風向き</th></tr>';
+    rows.forEach(r => {
+      const dir = windDirLabel(r.windDir);
+      html += `<tr><td>${r.time}時</td><td>${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td>${dir != null ? dir : '―'}</td></tr>`;
+    });
+    html += '</table>';
+    $('windBody').innerHTML = html;
+    openModal('windModal');
+  }
+
   function setDay(day) {
     currentDay = day;
     $('tabToday').className = day === 'today' ? 'on' : '';
     $('tabTomorrow').className = day === 'tomorrow' ? 'on' : '';
+    $('tabDayAfter').className = day === 'dayafter' ? 'on' : '';
     render();
   }
 
@@ -1042,6 +1216,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     $('locOpenBtn').addEventListener('click', () => openModal('locModal'));
     $('weeklyBtn').addEventListener('click', () => openModal('weekModal'));
     $('hourlyBtn').addEventListener('click', () => openHourly());
+    $('precCell').addEventListener('click', () => openRainDetail());
+    $('windCell').addEventListener('click', () => openWindDetail());
     $('radarBtn').addEventListener('click', openRadar);
     document.querySelectorAll('[data-close]').forEach(btn => {
       btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close')));
@@ -1097,13 +1273,14 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     });
     $('tabToday').addEventListener('click', () => setDay('today'));
     $('tabTomorrow').addEventListener('click', () => setDay('tomorrow'));
+    $('tabDayAfter').addEventListener('click', () => setDay('dayafter'));
     refresh(true);
   });
 }
 
 /* Node等での検証用エクスポート */
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseDayCards, parseHourly, parseWeek, parsePlaceName, workOutfitFor, judgeTemp, umbrellaAdvice, wxText, wxEmoji, feelsLike, findNextRain, daytimeFeelsAvg, daytimeWindAvg, dayWindMax, dateFromMrfTm };
+  module.exports = { parseDayCards, parseHourly, parseWeek, parsePlaceName, parseOmPop, parseOmWind, omKey, windDirLabel, workOutfitFor, judgeTemp, umbrellaAdvice, wxText, wxEmoji, feelsLike, findNextRain, daytimeFeelsAvg, daytimeWindAvg, dayWindMax, dateFromMrfTm };
 }
 </script>
 <script>
@@ -1127,12 +1304,11 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 <script>
-/* スワイプで今日/明日を切り替え（左スワイプ→今日、右スワイプ→明日）※v12で逆転 */
+/* スワイプで今日/明日/明後日を切り替え（左スワイプ→前の日、右スワイプ→次の日） */
 (function () {
   var card = document.getElementById('wxCard');
-  var tabToday = document.getElementById('tabToday');
-  var tabTomorrow = document.getElementById('tabTomorrow');
-  if (!card || !tabToday || !tabTomorrow) return;
+  var tabs = [document.getElementById('tabToday'), document.getElementById('tabTomorrow'), document.getElementById('tabDayAfter')];
+  if (!card || tabs.some(function (t) { return !t; })) return;
   var sx = 0, sy = 0;
   card.addEventListener('touchstart', function (e) {
     var t = e.changedTouches[0];
@@ -1142,7 +1318,12 @@ if ('serviceWorker' in navigator) {
     var t = e.changedTouches[0];
     var dx = t.clientX - sx, dy = t.clientY - sy;
     if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      (dx < 0 ? tabToday : tabTomorrow).click();
+      var idx = tabs.findIndex(function (tb) { return tb.className === 'on'; });
+      if (idx < 0) idx = 0;
+      var next = dx < 0 ? idx - 1 : idx + 1;
+      if (next < 0) next = 0;
+      if (next > tabs.length - 1) next = tabs.length - 1;
+      if (next !== idx) tabs[next].click();
     }
   }, { passive: true });
 })();
