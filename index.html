@@ -118,6 +118,7 @@
   .cell .k { font-size: 15px; color: #6b7280; font-weight: 600; line-height: 1.2; }
   .cell .v { font-size: 18px; font-weight: 700; margin-top: 0; line-height: 1.2; }
   .cell .v .wdir { display: inline-block; margin-right: 3px; }
+  .nw-v .wdir { display: inline-block; margin-right: 2px; }
   .feels-row {
     margin-top: 8px; background: #fff7e6; border-radius: 12px; padding: 8px 10px;
     display: flex; justify-content: space-around; text-align: center;
@@ -1029,7 +1030,9 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     $('nowWx').textContent = wxEmoji(row.wx);
     $('nowTemp').textContent = row.temp != null ? `${row.temp}℃` : '--℃';
     $('nowRain').textContent = `降水量 ${row.rainMm != null ? row.rainMm : 0}ミリ`;
-    $('nowWind').textContent = `風速 ${row.windSpd != null ? row.windSpd : '--'}m/s`;
+    const nDeg = windToDeg(row.windDir);
+    const nArrow = nDeg != null && row.windSpd > 0 ? `<span class="wdir" style="transform:rotate(${nDeg}deg)">↑</span>` : '';
+    $('nowWind').innerHTML = `風速 ${nArrow}${row.windSpd != null ? row.windSpd : '--'}m/s`;
   }
 
   function render() {
