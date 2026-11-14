@@ -147,6 +147,7 @@
   #rainModal table.mini th, #windModal table.mini th { font-size: 18px; }
   #rainModal table.mini td, #windModal table.mini td { font-size: 19px; }
   #rainModal table.mini td.rn { font-size: 23px; font-weight: 700; }
+  #rainModal table.mini td.rz { font-size: 23px; font-weight: 700; }
   #hourlyModal table.mini th { font-size: 17px; }
   #hourlyModal table.mini td { font-size: 18px; }
   /* 降水確率の数字と％は字面が小さく見えるため、この列は21pxにする（降水量は単位「㎜」付きで23px・太字） */
@@ -181,11 +182,11 @@
   /* ポップアップ（モーダル） */
   .overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 50;
-    display: flex; align-items: flex-end; justify-content: center;
+    display: flex; align-items: stretch; justify-content: center;
   }
   .sheet {
-    background: #fff; width: 100%; max-width: 420px; max-height: 88vh; max-height: 88dvh; overflow: hidden;
-    border-radius: 20px 20px 0 0; padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+    background: #fff; width: 100%; max-width: 420px; height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; overflow: hidden;
+    border-radius: 0; padding: calc(14px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
     animation: slideUp .22s ease-out;
     display: flex; flex-direction: column;
   }
@@ -331,6 +332,7 @@
   <div class="sheet">
     <div class="sheet-head"><h3 id="rainTitle">💧 降水の詳細</h3><button type="button" class="sheet-close" data-close="rainModal">✕</button></div>
     <div class="sheet-body" id="rainBody"><p class="note">読み込み中…</p></div>
+    <button type="button" class="close-bottom-btn" data-close="rainModal">閉じる</button>
   </div>
 </div>
 
@@ -1490,8 +1492,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const d = dateFromMrfTm(e.mrf.tm);
     $('rainTitle').innerHTML = `💧 降水の詳細<span class="h-sub2">${d.mo}月${d.d}日（${d.dow}）・${DAY_LABEL[currentDay]}</span>`;
     if (!rows.length) {
-      $('rainBody').innerHTML = '<p class="note">降水の詳細を取得できませんでした。</p><button type="button" class="close-bottom-btn" id="rainCloseBottom">閉じる</button>';
-      $('rainCloseBottom').addEventListener('click', () => closeModal('rainModal'));
+      $('rainBody').innerHTML = '<p class="note">降水の詳細を取得できませんでした。</p>';
       openModal('rainModal');
       return;
     }
@@ -1499,12 +1500,11 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const popMap = lastData.popMap || {};
     rows.forEach(r => {
       const pop = popMap[omKey(r.date, r.time)];
-      html += `<tr><td>${r.time}時</td><td class="rn">${r.rainMm != null ? r.rainMm : 0}㎜</td><td>${pop != null ? `${pop}%` : '―'}</td></tr>`;
+      const rv = r.rainMm != null ? r.rainMm : 0;
+      html += `<tr><td>${r.time}時</td><td class="${rv >= 1 ? 'rn' : 'rz'}">${rv}㎜</td><td>${pop != null ? `${pop}%` : '―'}</td></tr>`;
     });
     html += '</table>';
-    html += '<button type="button" class="close-bottom-btn" id="rainCloseBottom">閉じる</button>';
     $('rainBody').innerHTML = html;
-    $('rainCloseBottom').addEventListener('click', () => closeModal('rainModal'));
     openModal('rainModal');
   }
 
@@ -1566,49 +1566,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     document.querySelectorAll('.overlay').forEach(ov => {
       ov.addEventListener('click', (e) => { if (e.target === ov) closeModal(ov.id); });
     });
-    // ポップアップを一番上までスクロールした状態で下へスワイプすると、指に追従して滑らかに閉じる
-    document.querySelectorAll('.sheet').forEach(sheet => {
-      const ov = sheet.closest('.overlay');
-      const sc = sheet.querySelector('.sheet-body');
-      let sy = null, dy0 = null, off = 0, dragging = false;
-      const clearFx = () => {
-        sheet.style.transition = ''; sheet.style.transform = ''; sheet.style.opacity = '';
-        if (ov) { ov.style.transition = ''; ov.style.opacity = ''; }
-      };
-      sheet.addEventListener('touchstart', (e) => { sy = e.touches[0].clientY; dy0 = null; off = 0; dragging = false; }, { passive: true });
-      sheet.addEventListener('touchmove', (e) => {
-        if (sy === null) return;
-        const dy = e.touches[0].clientY - sy;
-        if ((!sc || sc.scrollTop <= 0) && dy > 0) {
-          if (dy0 === null) dy0 = dy;
-          off = Math.max(0, dy - dy0);
-          dragging = true;
-          sheet.style.transition = 'none';
-          sheet.style.transform = `translateY(${off}px)`;
-          if (ov) { ov.style.transition = 'none'; ov.style.opacity = String(Math.max(0.5, 1 - off / 600)); }
-          if (e.cancelable) e.preventDefault();
-        }
-      }, { passive: false });
-      const finish = (o) => {
-        if (!dragging) return;
-        dragging = false;
-        if (o >= 70 && ov) {
-          sheet.style.transition = 'transform .25s ease, opacity .25s ease';
-          sheet.style.transform = 'translateY(110%)';
-          sheet.style.opacity = '0';
-          ov.style.transition = 'opacity .25s ease';
-          ov.style.opacity = '0';
-          setTimeout(() => { closeModal(ov.id); clearFx(); }, 260);
-        } else {
-          sheet.style.transition = 'transform .2s ease';
-          sheet.style.transform = '';
-          if (ov) { ov.style.transition = 'opacity .2s ease'; ov.style.opacity = ''; }
-          setTimeout(clearFx, 210);
-        }
-      };
-      sheet.addEventListener('touchend', () => { const o = off; sy = null; finish(o); }, { passive: true });
-      sheet.addEventListener('touchcancel', () => { sy = null; finish(0); }, { passive: true });
-    });
+    // （ポップアップを下スワイプで閉じる操作は v96 で廃止。閉じるボタン・✕・外側タップで閉じる）
     $('addLocBtn').addEventListener('click', addLocation);
     $('locAddr').addEventListener('keydown', (e) => { if (e.key === 'Enter') addLocation(); });
     $('geoBtn').addEventListener('click', useCurrentLocation);
