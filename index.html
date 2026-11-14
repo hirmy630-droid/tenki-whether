@@ -1472,7 +1472,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     rows.forEach(r => {
       const fl = r.temp != null ? feelsLike(r.temp, r.windSpd, r.wx, r.time, sunRange(e.mrf)) : null;
       const rv = r.rainMm;
-      const pop = lastData.popMap ? lastData.popMap[`${r.date.getFullYear()}-${pad(r.date.getMonth() + 1)}-${pad(r.date.getDate())}T${pad(r.time)}`] : null;
+      const pop = lastData.popMap ? lastData.popMap[omKey(r.date, r.time)] : null;
       const rCls = rv != null && (rv >= 1 || (pop != null && pop >= 40)) ? 'rn' : 'rz';
       const wI = r.windImg && r.windSpd > 0 ? `<img class="wicon-t" src="https://gvs.weathernews.jp/onebox/img/wind/png/${r.windImg}" alt="" onerror="this.remove()">` : '';
       html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td class="fl">${fl ?? '--'}</td><td>${wI}${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td class="${rCls}">${rv != null ? `${rv}㎜` : '―'}</td></tr>`;
