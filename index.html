@@ -146,8 +146,8 @@
   table.mini td { font-size: 16px; }
   #rainModal table.mini th, #windModal table.mini th { font-size: 18px; }
   #rainModal table.mini td, #windModal table.mini td { font-size: 19px; }
-  #rainModal table.mini td.rn { font-size: 23px; font-weight: 700; }
-  #rainModal table.mini td.rz { font-size: 23px; font-weight: 700; }
+  #rainModal table.mini td.rn { font-size: 23px; }
+  #rainModal table.mini td.rz { font-size: 23px; }
   #hourlyModal table.mini th { font-size: 17px; }
   #hourlyModal table.mini td { font-size: 18px; }
   /* 降水確率の数字と％は字面が小さく見えるため、この列は21pxにする（降水量は単位「㎜」付きで23px・太字） */
@@ -182,11 +182,11 @@
   /* ポップアップ（モーダル） */
   .overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 50;
-    display: flex; align-items: stretch; justify-content: center;
+    display: flex; align-items: flex-end; justify-content: center;
   }
   .sheet {
-    background: #fff; width: 100%; max-width: 420px; height: 100vh; height: 100dvh; max-height: 100vh; max-height: 100dvh; overflow: hidden;
-    border-radius: 0; padding: calc(14px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom));
+    background: #fff; width: 100%; max-width: 420px; max-height: calc(100vh - env(safe-area-inset-top)); max-height: calc(100dvh - env(safe-area-inset-top)); overflow: hidden;
+    border-radius: 20px 20px 0 0; padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
     animation: slideUp .22s ease-out;
     display: flex; flex-direction: column;
   }
