@@ -44,11 +44,12 @@
   .btn-blue:hover { background: #0062cc; }
   .btn-gray { background: #f2f2f7; color: #007aff; border: 1px solid #d1d1d6; width: 100%; min-height: 44px; font-weight: 700; margin-top: 10px; }
   .btn-row3 { display: flex; gap: 8px; margin-top: 10px; }
-  .btn-sub3 { flex: 1; min-height: 36px; background: #f2f2f7; color: #007aff; border: 1px solid #d1d1d6; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; padding: 4px 2px; }
+  .btn-sub3 { flex: 1; min-height: 36px; background: linear-gradient(180deg, #3395ff 0%, #007aff 55%, #006ee0 100%); color: #f2f2f7; border: 1px solid #0062cc; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; padding: 4px 2px; box-shadow: 0 2px 5px rgba(0,60,140,0.28), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -2px 0 rgba(0,0,0,0.14); transition: transform .08s ease, box-shadow .08s ease; }
+  .btn-sub3:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0,60,140,0.25), inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -1px 0 rgba(0,0,0,0.14); }
   .btn-main {
     width: 100%; height: 40px; font-size: 16px; color: #fff;
-    background: linear-gradient(90deg, #ff9500, #ff6a3a);
-    border-radius: 12px; box-shadow: 0 4px 10px rgba(255,106,58,0.3);
+    background: linear-gradient(180deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 48%, rgba(0,0,0,0.10)), linear-gradient(90deg, #ff9500, #ff6a3a);
+    border-radius: 12px; box-shadow: 0 4px 10px rgba(255,106,58,0.32), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(0,0,0,0.14);
   }
   .btn-main:hover { filter: brightness(1.05); }
   .btn-loc {
