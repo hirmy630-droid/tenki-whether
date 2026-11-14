@@ -155,8 +155,6 @@
   table.mini td.fl { color: #ff9500; }
   table.mini td.rn { color: #007aff; }
   table.mini td.rz { color: #6b7280; }
-  table.mini td.wg { color: #1e9e50; }
-  table.mini td.wp { color: #8e24aa; }
   .close-bottom-btn { display: block; width: 100%; margin: 16px 0 2px; padding: 13px; font-size: 16px; font-weight: 700; color: #007aff; background: #eef4ff; border: none; border-radius: 12px; cursor: pointer; }
   .week-row { display: grid; grid-template-columns: 52px 32px 1fr 52px 58px; align-items: center; gap: 6px; padding: 6px 2px; border-bottom: 1px solid #eeeef2; font-size: 16px; }
   .week-row:last-child { border-bottom: none; }
@@ -1474,9 +1472,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     rows.forEach(r => {
       const fl = r.temp != null ? feelsLike(r.temp, r.windSpd, r.wx, r.time, sunRange(e.mrf)) : null;
       const rv = r.rainMm;
-      const wCls = r.windSpd != null && r.windSpd >= 10 ? 'wp' : (r.windSpd != null && r.windSpd >= 5 ? 'wg' : '');
       const wI = r.windImg && r.windSpd > 0 ? `<img class="wicon-t" src="https://gvs.weathernews.jp/onebox/img/wind/png/${r.windImg}" alt="" onerror="this.remove()">` : '';
-      html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td class="fl">${fl ?? '--'}</td><td class="${wCls}">${wI}${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td class="${rv != null && rv >= 1 ? 'rn' : 'rz'}">${rv != null ? `${rv}㎜` : '―'}</td></tr>`;
+      html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td class="fl">${fl ?? '--'}</td><td>${wI}${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td class="${rv != null && rv >= 1 ? 'rn' : 'rz'}">${rv != null ? `${rv}㎜` : '―'}</td></tr>`;
     });
     html += '</table>';
     $('hourlyBody').innerHTML = html;
@@ -1532,8 +1529,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       const dir = windDirLabel(r.windDir);
       const dirLbl = dir != null ? dir : '―';
       const dirCell = r.windImg && r.windSpd > 0 ? `<span>${dirLbl}</span><img class="wicon-t" src="https://gvs.weathernews.jp/onebox/img/wind/png/${r.windImg}" alt="" onload="var p=this.previousElementSibling;if(p)p.style.display='none'" onerror="this.remove()">` : dirLbl;
-      const wCls = r.windSpd != null && r.windSpd >= 10 ? 'wp' : (r.windSpd != null && r.windSpd >= 5 ? 'wg' : '');
-      html += `<tr><td>${r.time}時</td><td class="${wCls}">${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td>${dirCell}</td></tr>`;
+      html += `<tr><td>${r.time}時</td><td>${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td>${dirCell}</td></tr>`;
     });
     html += '</table>';
     $('windBody').innerHTML = html;
