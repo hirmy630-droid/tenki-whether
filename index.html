@@ -146,13 +146,15 @@
   table.mini td { font-size: 16px; }
   #rainModal table.mini th, #windModal table.mini th { font-size: 18px; }
   #rainModal table.mini td, #windModal table.mini td { font-size: 19px; }
-  #rainModal table.mini td.rn { font-size: 21px; font-weight: 700; }
+  #rainModal table.mini td.rn { font-size: 23px; font-weight: 700; }
   #hourlyModal table.mini th { font-size: 17px; }
   #hourlyModal table.mini td { font-size: 18px; }
-  /* 降水確率の数字と％は字面が小さく見えるため、この列は21pxにする（降水量の数字も同じ21px・太字でそろえた） */
+  /* 降水確率の数字と％は字面が小さく見えるため、この列は21pxにする（降水量は単位「㎜」付きで23px・太字） */
   #rainModal table.mini td:last-child { font-size: 21px; }
   table.mini td.fl { color: #ff9500; }
   table.mini td.rn { color: #007aff; }
+  table.mini td.rz { color: #6b7280; }
+  .close-bottom-btn { display: block; width: 100%; margin: 16px 0 2px; padding: 13px; font-size: 16px; font-weight: 700; color: #007aff; background: #eef4ff; border: none; border-radius: 12px; cursor: pointer; }
   .week-row { display: grid; grid-template-columns: 52px 32px 1fr 52px 58px; align-items: center; gap: 6px; padding: 6px 2px; border-bottom: 1px solid #eeeef2; font-size: 16px; }
   .week-row:last-child { border-bottom: none; }
   .week-row.week-head { color: #6b7280; font-weight: 600; position: sticky; top: 0; background: #fff; z-index: 1; }
@@ -302,6 +304,7 @@
     <div class="loc-list" id="locList"></div>
     <p class="status-line" id="locStatus" style="margin-top:8px;"></p>
     </div>
+    <button type="button" class="close-bottom-btn" data-close="locModal">閉じる</button>
   </div>
 </div>
 
@@ -310,6 +313,7 @@
   <div class="sheet">
     <div class="sheet-head"><h3>🌧️ 雨雲レーダー</h3><button type="button" class="sheet-close" data-close="radarModal">✕</button></div>
     <iframe class="sheet-body" id="radarFrame" title="雨雲レーダー" loading="lazy"></iframe>
+    <button type="button" class="close-bottom-btn" data-close="radarModal">閉じる</button>
   </div>
 </div>
 
@@ -318,6 +322,7 @@
   <div class="sheet">
     <div class="sheet-head"><h3 id="hourlyTitle">🕐 1時間毎の予報</h3><button type="button" class="sheet-close" data-close="hourlyModal">✕</button></div>
     <div class="sheet-body" id="hourlyBody"><p class="note">読み込み中…</p></div>
+    <button type="button" class="close-bottom-btn" data-close="hourlyModal">閉じる</button>
   </div>
 </div>
 
@@ -334,6 +339,7 @@
   <div class="sheet">
     <div class="sheet-head"><h3 id="windTitle">🍃 風の詳細</h3><button type="button" class="sheet-close" data-close="windModal">✕</button></div>
     <div class="sheet-body" id="windBody"><p class="note">読み込み中…</p></div>
+    <button type="button" class="close-bottom-btn" data-close="windModal">閉じる</button>
   </div>
 </div>
 
@@ -342,6 +348,7 @@
   <div class="sheet">
     <div class="sheet-head"><h3 id="weekTitle">📅 週間・2週間予報</h3><button type="button" class="sheet-close" data-close="weekModal">✕</button></div>
     <div class="sheet-body" id="weekList"><p class="note">読み込み中…</p></div>
+    <button type="button" class="close-bottom-btn" data-close="weekModal">閉じる</button>
   </div>
 </div>
 
@@ -1459,13 +1466,12 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       openModal('hourlyModal');
       return;
     }
-    let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温</th><th>体感</th><th>風速</th><th>降水</th></tr>';
-    const popMap = lastData.popMap || {};
+    let html = '<table class="mini"><tr><th>時</th><th>天気</th><th>気温</th><th>体感</th><th>風速</th><th>雨量</th></tr>';
     rows.forEach(r => {
       const fl = r.temp != null ? feelsLike(r.temp, r.windSpd, r.wx, r.time, sunRange(e.mrf)) : null;
-      const pop = popMap[omKey(r.date, r.time)];
+      const rv = r.rainMm;
       const wI = r.windImg && r.windSpd > 0 ? `<img class="wicon-t" src="https://gvs.weathernews.jp/onebox/img/wind/png/${r.windImg}" alt="" onerror="this.remove()">` : '';
-      html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td class="fl">${fl ?? '--'}</td><td>${wI}${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td class="rn">${pop != null ? `${pop}%` : '―'}</td></tr>`;
+      html += `<tr><td>${r.time}時</td><td>${wxEmoji(r.wx)}</td><td>${r.temp ?? '--'}</td><td class="fl">${fl ?? '--'}</td><td>${wI}${r.windSpd != null ? `${r.windSpd}m` : '--'}</td><td class="${rv != null && rv >= 1 ? 'rn' : 'rz'}">${rv != null ? `${rv}㎜` : '―'}</td></tr>`;
     });
     html += '</table>';
     $('hourlyBody').innerHTML = html;
@@ -1484,7 +1490,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const d = dateFromMrfTm(e.mrf.tm);
     $('rainTitle').innerHTML = `💧 降水の詳細<span class="h-sub2">${d.mo}月${d.d}日（${d.dow}）・${DAY_LABEL[currentDay]}</span>`;
     if (!rows.length) {
-      $('rainBody').innerHTML = '<p class="note">降水の詳細を取得できませんでした。</p>';
+      $('rainBody').innerHTML = '<p class="note">降水の詳細を取得できませんでした。</p><button type="button" class="close-bottom-btn" id="rainCloseBottom">閉じる</button>';
+      $('rainCloseBottom').addEventListener('click', () => closeModal('rainModal'));
       openModal('rainModal');
       return;
     }
@@ -1492,10 +1499,12 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     const popMap = lastData.popMap || {};
     rows.forEach(r => {
       const pop = popMap[omKey(r.date, r.time)];
-      html += `<tr><td>${r.time}時</td><td class="rn">${r.rainMm != null ? r.rainMm : 0}</td><td>${pop != null ? `${pop}%` : '―'}</td></tr>`;
+      html += `<tr><td>${r.time}時</td><td class="rn">${r.rainMm != null ? r.rainMm : 0}㎜</td><td>${pop != null ? `${pop}%` : '―'}</td></tr>`;
     });
     html += '</table>';
+    html += '<button type="button" class="close-bottom-btn" id="rainCloseBottom">閉じる</button>';
     $('rainBody').innerHTML = html;
+    $('rainCloseBottom').addEventListener('click', () => closeModal('rainModal'));
     openModal('rainModal');
   }
 
